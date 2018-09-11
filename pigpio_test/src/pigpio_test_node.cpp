@@ -83,8 +83,8 @@ int main(int argc, char **argv)
       ROS_INFO("%f", freq);
       gpio_write(pi, dirpin[0], PI_HIGH);
       gpio_write(pi, dirpin[1], PI_LOW);
-      hardware_PWM(pi, pwmpin[0], freq, HALF);
-      hardware_PWM(pi, pwmpin[1], freq, HALF);
+      hardware_PWM(pi, pwmpin[0], (int)freq, HALF);
+      hardware_PWM(pi, pwmpin[1], (int)freq, HALF);
     }
   }
 
