@@ -4,8 +4,9 @@
 #include "math.h"
 
 #define RAD2DEG(x) ((x)*180./M_PI)
-#define HALF 500000
-#define PHASE_DIFF 1.5*M_PI
+#define HALF 500000 //duty比50%
+#define PHASE_DIFF 1.5*M_PI //位相遅れ[rad]
+#define WALK_SPEED 1.6 //[m/s]
 
 int pi;
 extern int pi;
@@ -13,11 +14,11 @@ extern int pi;
 static int pwmpin[2] = {18, 19};
 static int dirpin[2] = {21, 20};
 
-static int d = 0.66; //タイヤ間距離[m]
-static int r = 0.15; //タイヤ半径[m]
-static int res = 0;  //モータ分解能[rad] 
+static float d = 0.66; //タイヤ間距離[m]
+static float r = 0.15; //タイヤ半径[m]
+static float res = 0.0036;  //モータ分解能[deg]
 
-static float safty = 0.3; //安全距離[m]
+static float safety = 0.3; //安全距離[m]
 
 float distance = 0.0; //LRFから得られた最近点までの距離[m]
 float angle = 0.0; //LRFから得られた最近点の角度[rad]
@@ -38,7 +39,7 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
       }
     }
   }
-  distance -= safty;
+  distance -= safety;
 }
 
 int main(int argc, char **argv)
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
   float x = 0.0;
   float y = 0.0;
   bool lost = false;
+  float freq = (WALK_SPEED * 90) / (M_PI * M_PI * res * r);
 
   pi = pigpio_start("localhost","8888");
   set_mode(pi, pwmpin[0], PI_OUTPUT);
@@ -66,15 +68,16 @@ int main(int argc, char **argv)
     loop_rate.sleep();
     ros::spinOnce();
 
-   // if(distance <= 0.0){
-   //   ROS_INFO("Too Close");
-   // }else{
+    //if(distance <= 0.0){
+      //ROS_INFO("Too Close");
+    //}else{
       duration = ros::Time::now() - begin;
       secs = duration.toSec();
       x = distance * std::cos(angle);
       y = distance * std::sin(angle);
       ROS_INFO("x:%f, y:%f", x, y);
-   // }
+      ROS_INFO("%f", freq);
+    //}
   }
 
   // 出力信号の停止
