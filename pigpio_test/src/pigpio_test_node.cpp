@@ -68,16 +68,24 @@ int main(int argc, char **argv)
     loop_rate.sleep();
     ros::spinOnce();
 
-    //if(distance <= 0.0){
-      //ROS_INFO("Too Close");
-    //}else{
+    if(distance <= 0.0){
+      ROS_INFO("Too Close");
+      hardware_PWM(pi, pwmpin[0], 0, 0);
+      hardware_PWM(pi, pwmpin[1], 0, 0);
+    }else{
       duration = ros::Time::now() - begin;
       secs = duration.toSec();
       x = distance * std::cos(angle);
       y = distance * std::sin(angle);
+      //ROS_INFO("%lf", secs);
+      //ROS_INFO("%f, %f", distance, angle);
       ROS_INFO("x:%f, y:%f", x, y);
       ROS_INFO("%f", freq);
-    //}
+      gpio_write(pi, dirpin[0], PI_HIGH);
+      gpio_write(pi, dirpin[1], PI_LOW);
+      hardware_PWM(pi, pwmpin[0], freq, HALF);
+      hardware_PWM(pi, pwmpin[1], freq, HALF);
+    }
   }
 
   // 出力信号の停止
