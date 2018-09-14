@@ -7,10 +7,10 @@
 #define DOT(x, x_prev, dt) (((x)-(x_prev))/(dt))
 
 #define HALF 500000 //duty比50%
-#define PHASE_DIFF 1.5*M_PI //位相遅れ[rad]
-#define KPl 1 //will change
+#define PHASE_DIFF 2*M_PI //位相遅れ[rad]
+#define KPl 50000 //will change
 #define KDl 1 //will change
-#define KPt 1 //will change
+#define KPt 50000 //will change
 #define KDt 1 //will change
 
 int pi;
@@ -35,13 +35,13 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   int count = scan->scan_time / scan->time_increment;
   l = 0.0;
   theta = 0.0;
-
   for(int i = 0; i < count; i++) {
-    float degree = RAD2DEG(fmodf(scan->angle_min + PHASE_DIFF + scan->angle_increment * i, 2*M_PI));
-    if(0.0 < degree && degree < 180.0){
+    float rad = fmodf(scan->angle_min + PHASE_DIFF + scan->angle_increment * i, 2*M_PI);
+    float degree = RAD2DEG(rad);
+    if(90.0 < degree && degree < 270.0){
       if(i == 0 || l > scan->ranges[i]){
         l = scan->ranges[i];
-        theta = degree;
+        theta = rad;
       }
     }
   }
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
   double u_r = 0.0;
   double v = 0.0;
   double ohm = 0.0;
-  
+
   double d_theta = 0.0;
   double d_l = 0.0;
 
@@ -77,49 +77,45 @@ int main(int argc, char **argv)
     now = ros::Time::now();
     duration = now - prev;
     dt = duration.toSec();
-    
-    //if(l <= safety){
-      //ROS_INFO("Too Close");
-      //hardware_PWM(pi, pwmpin[0], 0, 0);
-      //hardware_PWM(pi, pwmpin[1], 0, 0);
-    //}else if(!lost){
-         
+
+    if(!lost){
       d_theta = DOT(theta, theta_prev, dt);
       d_l     = DOT(l, l_prev, dt);
-      
       v   = M_PI * b * r / 360 * ( u_r + u_l/d);
       ohm = M_PI * b * r / 360 * ( u_r - u_l/d);
-      
-      u_r = ( KPl * ( l - 1 ) + KDl * ( d_l - v ) + KPt * ( theta - M_PI/2 ) + KDt * ( d_theta - ohm ))*1/2;
-      u_l = ( KPl * ( l - 1 ) + KDl * ( d_l - v ) - KPt * ( theta - M_PI/2 ) - KDt * ( d_theta - ohm ))*d/2;
-      
+
+      u_r = ( KPl * ( l - 1 ) + KDl * ( d_l - v ) + KPt * ( theta - M_PI ) + KDt * ( d_theta - ohm ))*1/2;
+      u_l = ( KPl * ( l - 1 ) + KDl * ( d_l - v ) - KPt * ( theta - M_PI ) - KDt * ( d_theta - ohm ))*d/2;
+
       ROS_INFO("dt:%lf", dt);
       ROS_INFO("u_l:%lf", u_l);
       ROS_INFO("u_r:%lf", u_r);
       ROS_INFO("v:%lf", v);
       ROS_INFO("ohm:%lf", ohm);
-      
+
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
+        u_r = std::fabs(u_r);
       }else{
         gpio_write(pi, dirpin[0], PI_HIGH);
       }
-      
+
       if(u_l < 0){
         gpio_write(pi, dirpin[1], PI_HIGH);
+        u_l = std::fabs(u_l);
       }else{
         gpio_write(pi, dirpin[1], PI_LOW);
       }
-      
-      hardware_PWM(pi, pwmpin[0], (int)u_r, HALF);
-      hardware_PWM(pi, pwmpin[1], (int)u_l, HALF);
+
+      hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
+      hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
     //}else{
     //  ROS_INFO("mada");
-    //}
-    
+    }
+
     theta_prev = theta;
     l_prev = l;
-    
+
     sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
 
     prev = now;
