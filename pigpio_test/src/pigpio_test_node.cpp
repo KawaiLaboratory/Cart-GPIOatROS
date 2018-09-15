@@ -8,10 +8,9 @@
 
 #define HALF 500000 //duty比50%
 #define PHASE_DIFF 2*M_PI //位相遅れ[rad]
-#define KPl 50000 //will change
-#define KDl 1 //will change
-#define KPt 50000 //will change
-#define KDt 1 //will change
+#define R 0.0036*M_PI/180.0
+#define KP 50000 //will change
+#define KD 1 //will change
 
 int pi;
 extern int pi;
@@ -21,9 +20,8 @@ static int dirpin[2] = {21, 20};
 
 static float d = 0.66/2; //タイヤ間距離[m]
 static float r = 0.15/2; //タイヤ半径[m]
-static float b = 0.0036;  //モータ分解能[deg]
 
-static float safety = 0.5; //安全距離[m]
+static float safety = 1.0; //安全距離[m]
 
 float l = 0.0; //得られた最近点までの距離[m]
 float l_prev = 0.0;
@@ -66,6 +64,11 @@ int main(int argc, char **argv)
 
   double d_theta = 0.0;
   double d_l = 0.0;
+  
+  double k_pl = KP/(R*r);
+  double k_dl = KD/(R*r);
+  double k_pt = KP*d/(R*r);
+  double k_dt = KD*d/(R*r);
 
   pi = pigpio_start("localhost","8888");
   set_mode(pi, pwmpin[0], PI_OUTPUT);
@@ -81,11 +84,11 @@ int main(int argc, char **argv)
     if(!lost){
       d_theta = DOT(theta, theta_prev, dt);
       d_l     = DOT(l, l_prev, dt);
-      v   = M_PI * b * r / 360 * ( u_r + u_l/d);
-      ohm = M_PI * b * r / 360 * ( u_r - u_l/d);
+      v   = R * r * ( u_r + u_l);
+      ohm = R * r / ( 2*d ) * ( u_r - u_l);
 
-      u_r = ( KPl * ( l - 1 ) + KDl * ( d_l - v ) + KPt * ( theta - M_PI ) + KDt * ( d_theta - ohm ))*1/2;
-      u_l = ( KPl * ( l - 1 ) + KDl * ( d_l - v ) - KPt * ( theta - M_PI ) - KDt * ( d_theta - ohm ))*d/2;
+      u_r = k_pl * ( l - 1 ) + k_dl * ( d_l - v ) + k_pt * ( theta - M_PI ) + k_dt * ( d_theta - ohm );
+      u_l = k_pl * ( l - 1 ) + k_dl * ( d_l - v ) - k_pt * ( theta - M_PI ) - k_dt * ( d_theta - ohm );
 
       ROS_INFO("dt:%lf", dt);
       ROS_INFO("u_l:%lf", u_l);
@@ -110,7 +113,7 @@ int main(int argc, char **argv)
       hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
       hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
     //}else{
-    //  ROS_INFO("mada");
+    //  ROS_INFO("soon");
     }
 
     theta_prev = theta;
@@ -118,10 +121,9 @@ int main(int argc, char **argv)
 
     sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
 
-    prev = now;
     loop_rate.sleep();
     ros::spinOnce();
-    
+    prev = now;    
   }
 
   // 出力信号の停止
