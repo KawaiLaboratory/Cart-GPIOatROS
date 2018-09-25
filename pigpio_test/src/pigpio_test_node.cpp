@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(10);
   ros::Time prev = ros::Time::now();
   ros::Time now;
   ros::Duration duration;
