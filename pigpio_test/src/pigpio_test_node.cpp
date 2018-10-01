@@ -9,8 +9,6 @@
 #define HALF 500000 //duty比50%
 #define PHASE_DIFF 2*M_PI //位相遅れ[rad]
 #define R 0.0036*M_PI/180.0
-#define KP 1 //will change
-#define KD 0.1 //will change
 
 int pi;
 extern int pi;
@@ -63,8 +61,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
   ros::Subscriber sub;
-  ros::Rate loop_rate(10);
-  
+  ros::Rate loop_rate(1);
+
   pi = pigpio_start("localhost","8888");
   set_mode(pi, pwmpin[0], PI_OUTPUT);
   set_mode(pi, dirpin[0], PI_OUTPUT);
@@ -73,25 +71,27 @@ int main(int argc, char **argv)
 
   bool lost = false; //find target?
   double dt = 0.0;   //control cycle
-  
+
   double u_l = 0.0;  double u_r = 0.0;  //input left hz & right hz
   double v = 0.0;    double ohm = 0.0;  //cart's output speed
   double dx_c = 0.0; double dy_c = 0.0; //cart's x speed & y speed
-  
+
   sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, setupLRF); //first scan
   loop_rate.sleep();
   ros::spinOnce();
-  
+
   double x_p = l * std::cos(theta-M_PI/2); double dx_p = 0.0; //point's x position & speed
   double y_p = l * std::sin(theta-M_PI/2); double dy_p = 0.0; //point's y position & speed
-  
+
+  ROS_INFO("xp:%lf, yp:%lf",x_p, y_p);
+
   double x_pnext = 0.0; //point's next x position
   double y_pnext = 0.0; //point's next y position
-  
+
   double e_x=0.0;         double e_y=0.0;double e_xv=0.0;double e_yv=0.0; //position & speed error
   double X_e = 0.0;       double Y_e = 0.0; //error sum
   double tmpSqrt = 0.0; double tmpAtan = 0.0;
-  
+
   ros::Time now = ros::Time::now();
   ros::Time next;
   ros::Duration duration;
@@ -105,11 +105,14 @@ int main(int argc, char **argv)
     next = ros::Time::now();
     duration = next - now;
     dt = duration.toSec();
-
+    now = ros::Time::now();
+    ROS_INFO("%lf", dt);
     if(!lost){
       x_pnext = l_next * std::cos(theta_next-M_PI/2);
       y_pnext = l_next * std::sin(theta_next-M_PI/2);
-      
+      ROS_INFO("x_p:%lf, y_p:%lf", x_p, y_p);
+      ROS_INFO("x_pn:%lf, y_pn:%lf", x_pnext, y_pnext);
+
       dx_p = (x_pnext - x_p)/dt;
       dy_p = (y_pnext - y_p)/dt;
 
@@ -120,23 +123,25 @@ int main(int argc, char **argv)
         e_x  = 0.0;
         e_xv = 0.0;
       }
-      
-      if(1<y_pnext){
+
+      if(1.0<y_pnext){
         e_y  = y_pnext - 1;
         e_yv = dy_p - dy_c;
       }else{
         e_y  = 0.0;
         e_yv = 0.0;
       }
-      
+
       X_e = e_x + e_xv;
       Y_e = e_y + e_yv;
-      
+
       tmpSqrt = 1/(R*r)*std::sqrt(X_e*X_e+Y_e*Y_e);
       tmpAtan = d/(R*r*dt)*(std::atan2(Y_e, X_e)-M_PI);
-      
+
       u_r = tmpSqrt + tmpAtan;
       u_l = tmpSqrt - tmpAtan;
+
+      ROS_INFO("ur:%lf, ul:%lf",u_r, u_l);
 
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
@@ -151,9 +156,9 @@ int main(int argc, char **argv)
       }else{
         gpio_write(pi, dirpin[1], PI_LOW);
       }
-      
-      hardware_PWM(pi, pwmpin[0], (int)u_r, HALF);
-      hardware_PWM(pi, pwmpin[1], (int)u_l, HALF);
+
+      hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
+      hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
       
       v   = R*r/2*(u_r + u_l);
       ohm = R*r/(2*d)*(u_r - u_l);
