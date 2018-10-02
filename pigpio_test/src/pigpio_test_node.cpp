@@ -3,12 +3,15 @@
 #include "pigpiod_if2.h"
 #include "math.h"
 
-#define DOT(x_next, x, dt) (((x_next)-(x))/(dt))
+#define DOT(x, x_prev, dt) (((x)-(x_prev))/(dt))
 #define RAD2DEG(x) ((x)*180./M_PI)
 
 #define HALF 500000 //duty比50%
 #define PHASE_DIFF 2*M_PI //位相遅れ[rad]
 #define R 0.0036*M_PI/180.0
+
+#define KP 0.05
+#define KD 0.01
 
 int pi;
 extern int pi;
@@ -19,10 +22,10 @@ static int dirpin[2] = {21, 20};
 static float d = 0.66/2; //タイヤ間距離[m]
 static float r = 0.15/2; //タイヤ半径[m]
 
-float l = 0.0;     float l_next = 0.0; //得られた最近点までの距離[m]
-float theta = 0.0; float theta_next = 0.0;//得られた最近点の角度[rad]
+double l = 0.0;     double l_prev = 0.0; //得られた最近点までの距離[m]
+double theta = 0.0; double theta_prev = 0.0;//得られた最近点の角度[rad]
 
-void setupLRF(const sensor_msgs::LaserScan::ConstPtr& scan)
+void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
   int count = scan->scan_time / scan->time_increment;
   l = 0.0;
@@ -39,29 +42,12 @@ void setupLRF(const sensor_msgs::LaserScan::ConstPtr& scan)
   }
 }
 
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
-{
-  int count = scan->scan_time / scan->time_increment;
-  l_next = 0.0;
-  theta_next = 0.0;
-  for(int i = 0; i < count; i++) {
-    float rad = fmodf(scan->angle_min + PHASE_DIFF + scan->angle_increment * i, 2*M_PI);
-    float degree = RAD2DEG(rad);
-    if(90.0 < degree  && degree < 270.0){
-      if(i == 0 || l > scan->ranges[i]){
-        l_next = scan->ranges[i];
-        theta_next = rad;
-      }
-    }
-  }
-}
-
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
   ros::Subscriber sub;
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(5);
 
   pi = pigpio_start("localhost","8888");
   set_mode(pi, pwmpin[0], PI_OUTPUT);
@@ -76,24 +62,24 @@ int main(int argc, char **argv)
   double v = 0.0;    double ohm = 0.0;  //cart's output speed
   double dx_c = 0.0; double dy_c = 0.0; //cart's x speed & y speed
 
-  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, setupLRF); //first scan
+  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
+
   loop_rate.sleep();
   ros::spinOnce();
 
-  double x_p = l * std::cos(theta-M_PI/2); double dx_p = 0.0; //point's x position & speed
-  double y_p = l * std::sin(theta-M_PI/2); double dy_p = 0.0; //point's y position & speed
+  double x_pprev = l * std::cos(theta-M_PI/2); double dx_p = 0.0; //point's x prev position & speed
+  double y_pprev = l * std::sin(theta-M_PI/2); double dy_p = 0.0; //point's y prev position & speed
 
-  ROS_INFO("xp:%lf, yp:%lf",x_p, y_p);
+  double x_p = 0.0; //point's current x position
+  double y_p = 0.0; //point's current y position
 
-  double x_pnext = 0.0; //point's next x position
-  double y_pnext = 0.0; //point's next y position
+  double e_x=0.0; double e_y=0.0; double e_xv=0.0; double e_yv=0.0; //position & speed error
 
-  double e_x=0.0;         double e_y=0.0;double e_xv=0.0;double e_yv=0.0; //position & speed error
-  double X_e = 0.0;       double Y_e = 0.0; //error sum
-  double tmpSqrt = 0.0; double tmpAtan = 0.0;
+  double X_e = 0.0;     double Y_e = 0.0; //error sum
+  double tmpSqrt = 0.0; double tmpAtan = 0.0; //tmp num
 
-  ros::Time now = ros::Time::now();
-  ros::Time next;
+  ros::Time prev = ros::Time::now();
+  ros::Time now;
   ros::Duration duration;
 
   while(ros::ok()){
@@ -102,30 +88,34 @@ int main(int argc, char **argv)
     loop_rate.sleep();
     ros::spinOnce();
 
-    next = ros::Time::now();
-    duration = next - now;
-    dt = duration.toSec();
     now = ros::Time::now();
+    duration = now - prev;
+    dt = duration.toSec();
+    prev = ros::Time::now();
+
     ROS_INFO("%lf", dt);
     if(!lost){
-      x_pnext = l_next * std::cos(theta_next-M_PI/2);
-      y_pnext = l_next * std::sin(theta_next-M_PI/2);
+      x_p = l * std::cos(theta-M_PI/2);
+      y_p = l * std::sin(theta-M_PI/2);
+
+      dx_p = (x_p - x_pprev)/dt;
+      dy_p = (y_p - y_pprev)/dt;
+
+      ROS_WARN("===================================");
+      ROS_INFO("xprev:%lf, yprev:%lf", x_pprev, y_pprev);
       ROS_INFO("x_p:%lf, y_p:%lf", x_p, y_p);
-      ROS_INFO("x_pn:%lf, y_pn:%lf", x_pnext, y_pnext);
+      ROS_INFO("dxp:%lf, dyp:%lf", dx_p, dy_p);
 
-      dx_p = (x_pnext - x_p)/dt;
-      dy_p = (y_pnext - y_p)/dt;
-
-      if(0.25<x_pnext*x_pnext){
-        e_x  = std::sqrt(x_pnext*x_pnext-0.25);
+      if(0.25<x_p*x_p){
+        e_x  = std::sqrt(x_p*x_p-0.25);
         e_xv = dx_p - dx_c;
       }else{
-        e_x  = 0.0;
-        e_xv = 0.0;
+        e_x  = -0.0;
+        e_xv = -0.0;
       }
 
-      if(1.0<y_pnext){
-        e_y  = y_pnext - 1;
+      if(1.0<y_p){
+        e_y  = y_p - 1.0;
         e_yv = dy_p - dy_c;
       }else{
         e_y  = 0.0;
@@ -138,36 +128,34 @@ int main(int argc, char **argv)
       tmpSqrt = 1/(R*r)*std::sqrt(X_e*X_e+Y_e*Y_e);
       tmpAtan = d/(R*r*dt)*(std::atan2(Y_e, X_e)-M_PI);
 
-      u_r = tmpSqrt + tmpAtan;
-      u_l = tmpSqrt - tmpAtan;
-
-      ROS_INFO("ur:%lf, ul:%lf",u_r, u_l);
+      u_r = KP*tmpSqrt + KD*tmpAtan;
+      u_l = KP*tmpSqrt - KD*tmpAtan;
 
       if(u_r < 0){
-        gpio_write(pi, dirpin[0], PI_LOW);
+        gpio_write(pi, dirpin[0], PI_HIGH);
         u_r = std::fabs(u_r);
       }else{
-        gpio_write(pi, dirpin[0], PI_HIGH);
+        gpio_write(pi, dirpin[0], PI_LOW);
       }
 
       if(u_l < 0){
-        gpio_write(pi, dirpin[1], PI_HIGH);
+        gpio_write(pi, dirpin[1], PI_LOW);
         u_l = std::fabs(u_l);
       }else{
-        gpio_write(pi, dirpin[1], PI_LOW);
+        gpio_write(pi, dirpin[1], PI_HIGH);
       }
 
       hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
       hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
-      
+
       v   = R*r/2*(u_r + u_l);
       ohm = R*r/(2*d)*(u_r - u_l);
-      
+
       dx_c = v*std::cos(ohm*dt+M_PI);
       dy_c = v*std::sin(ohm*dt+M_PI);
     }
-    x_p = x_pnext;
-    y_p = y_pnext;
+    x_pprev = x_p;
+    y_pprev = y_p;
   }
 
   // 出力信号の停止
