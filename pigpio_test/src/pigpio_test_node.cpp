@@ -67,8 +67,8 @@ int main(int argc, char **argv)
   loop_rate.sleep();
   ros::spinOnce();
 
-  double x_pprev = l * std::cos(theta-M_PI/2); double dx_p = 0.0; //point's x prev position & speed
-  double y_pprev = l * std::sin(theta-M_PI/2); double dy_p = 0.0; //point's y prev position & speed
+  double x_pprev =  l * std::sin(theta); double dx_p = 0.0; //point's x prev position & speed
+  double y_pprev = -l * std::cos(theta); double dy_p = 0.0; //point's y prev position & speed
 
   double x_p = 0.0; //point's current x position
   double y_p = 0.0; //point's current y position
@@ -95,8 +95,8 @@ int main(int argc, char **argv)
 
     ROS_INFO("%lf", dt);
     if(!lost){
-      x_p = l * std::cos(theta-M_PI/2);
-      y_p = l * std::sin(theta-M_PI/2);
+      x_p =  l * std::sin(theta);
+      y_p = -l * std::cos(theta);
 
       dx_p = (x_p - x_pprev)/dt;
       dy_p = (y_p - y_pprev)/dt;
@@ -123,11 +123,11 @@ int main(int argc, char **argv)
       //}
 
       if(l<=1.0 && std::sin(M_PI/3) <= std::sin(theta-M_PI)){
-        e_x = -0.0; e_y = 0.0;     e_xv = -0.0;        e_yv = 0.0;
+        e_x = 0.0;  e_y = 0.0;     e_xv = 0.0;         e_yv = 0.0;
       }else if(l<=1.0 && std::sin(theta-M_PI) < std::sin(M_PI/3)){
         e_x = x_p;  e_y = 0.0;     e_xv = dx_p - dx_c; e_yv = 0.0;
       }else if(1.0<l  && std::sin(M_PI/3) <= std::sin(theta-M_PI)){
-        e_x = 0.0;  e_y = y_p-1.0; e_xv = -0.0;        e_yv = dy_p - dy_c;
+        e_x = 0.0;  e_y = y_p-1.0; e_xv = 0.0;         e_yv = dy_p - dy_c;
       }else{
         e_x = x_p;  e_y = y_p-1.0; e_xv = dx_p - dx_c; e_yv = dy_p - dy_c;
      }
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
       Y_e = e_y + e_yv;
 
       tmpSqrt = 1/(R*r)*std::sqrt(X_e*X_e+Y_e*Y_e);
-      tmpAtan = d/(R*r*dt)*(std::atan2(Y_e, X_e)-M_PI);
+      tmpAtan = d/(R*r*dt)*(std::atan2(Y_e, X_e));
 
       u_r = KP*tmpSqrt + KD*tmpAtan;
       u_l = KP*tmpSqrt - KD*tmpAtan;
