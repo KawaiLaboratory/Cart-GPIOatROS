@@ -10,8 +10,8 @@
 #define PHASE_DIFF 2*M_PI //位相遅れ[rad]
 #define R 0.0036*M_PI/180.0
 
-#define KP 0.05
-#define KD 0.01
+#define KP 0.3
+#define KD 0.1
 
 int pi;
 extern int pi;
