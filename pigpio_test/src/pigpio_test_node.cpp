@@ -72,11 +72,12 @@ int main(int argc, char **argv)
 
   double x_p = 0.0; //point's current x position
   double y_p = 0.0; //point's current y position
+  double alpha = 0.0;
 
   double e_x=0.0; double e_y=0.0; double e_xv=0.0; double e_yv=0.0; //position & speed error
 
   double X_e = 0.0;     double Y_e = 0.0; //error sum
-  double tmpSqrt = 0.0; double tmpAtan = 0.0; //tmp num
+  double tmpSqrt = 0.0; //tmp num
 
   ros::Time prev = ros::Time::now();
   ros::Time now;
@@ -97,6 +98,7 @@ int main(int argc, char **argv)
     if(!lost){
       x_p =  l * std::sin(theta);
       y_p = -l * std::cos(theta);
+      alpha = theta - M_PI;
 
       dx_p = (x_p - x_pprev)/dt;
       dy_p = (y_p - y_pprev)/dt;
@@ -106,40 +108,29 @@ int main(int argc, char **argv)
       ROS_INFO("x_p:%lf, y_p:%lf", x_p, y_p);
       ROS_INFO("dxp:%lf, dyp:%lf", dx_p, dy_p);
 
-      //if(0.25<x_p^x_p){
-      //  e_x  = x_p;
-      //  e_xv = dx_p - dx_c;
-      //}else{
-      //  e_x  = -0.0;
-      //  e_xv = -0.0;
-      //}
-
-      //if(1.0<y_p){
-      //  e_y  = y_p - 0.5;
-      //  e_yv = dy_p - dy_c;
-      //}else{
-      //  e_y  = 0.0;
-      //  e_yv = 0.0;
-      //}
-
-      if(l<=1.0 && std::sin(M_PI/3) <= std::sin(theta-M_PI)){
-        e_x = 0.0;  e_y = 0.0;     e_xv = 0.0;         e_yv = 0.0;
-      }else if(l<=1.0 && std::sin(theta-M_PI) < std::sin(M_PI/3)){
-        e_x = x_p;  e_y = 0.0;     e_xv = dx_p - dx_c; e_yv = 0.0;
-      }else if(1.0<l  && std::sin(M_PI/3) <= std::sin(theta-M_PI)){
-        e_x = 0.0;  e_y = y_p-1.0; e_xv = 0.0;         e_yv = dy_p - dy_c;
+      if(0.25<x_p*x_p){
+        e_x  = x_p;
+        e_xv = dx_p - dx_c;
       }else{
-        e_x = x_p;  e_y = y_p-1.0; e_xv = dx_p - dx_c; e_yv = dy_p - dy_c;
-     }
+        e_x  = -0.0;
+        e_xv = -0.0;
+      }
+
+      if(1.0<y_p){
+        e_y  = y_p - 0.5;
+        e_yv = dy_p - dy_c;
+      }else{
+        e_y  = 0.0;
+        e_yv = 0.0;
+      }
 
       X_e = e_x + e_xv;
       Y_e = e_y + e_yv;
 
-      tmpSqrt = 1/(R*r)*std::sqrt(X_e*X_e+Y_e*Y_e);
-      tmpAtan = d/(R*r*dt)*(std::atan2(Y_e, X_e));
+      tmpSqrt = std::sqrt(X_e*X_e+Y_e*Y_e);
 
-      u_r = KP*tmpSqrt + KD*tmpAtan;
-      u_l = KP*tmpSqrt - KD*tmpAtan;
+      u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt/(R*r);
+      u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt/(R*r);
 
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_HIGH);
