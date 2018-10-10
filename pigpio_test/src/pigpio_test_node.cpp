@@ -22,8 +22,8 @@ static int dirpin[2] = {21, 20};
 static float d = 0.66/2; //タイヤ間距離[m]
 static float r = 0.15/2; //タイヤ半径[m]
 
-double l = 0.0;     double l_prev = 0.0; //得られた最近点までの距離[m]
-double theta = 0.0; double theta_prev = 0.0;//得られた最近点の角度[rad]
+double l = 0.0;     //得られた最近点までの距離[m]
+double theta = 0.0; //得られた最近点の角度[rad]
 
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {

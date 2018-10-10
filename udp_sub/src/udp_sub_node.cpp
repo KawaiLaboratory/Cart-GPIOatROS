@@ -1,31 +1,43 @@
-#include <stdio.h>
+#include "ros/ros.h"
+#include <cstdio>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <string.h>
 
-int main()
-{
- int sock;
- struct sockaddr_in addr;
+int main(){
+  ros::init(argc, argv, "udp_sub");
+  ros::NodeHandle n;
+  ros::Rate loop_rate(1);
 
- char buf[2048];
+  int sock;
+  struct sockaddr_in addr;
 
- sock = socket(AF_INET, SOCK_DGRAM, 0);
+  char buf[2048];
+  char* delim ~ ",";
+  char* ctx;
 
- addr.sin_family = AF_INET;
- addr.sin_port = htons(12345);
- addr.sin_addr.s_addr = INADDR_ANY;
+  sock = socket(AF_INET, SOCK_DGRAM, 0);
 
- bind(sock, (struct sockaddr *)&addr, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(12345);
+  addr.sin_addr.s_addr = INADDR_ANY;
 
- memset(buf, 0, sizeof(buf));
- recv(sock, buf, sizeof(buf), 0);
+  while(ros::ok()){
+    bind(sock, (struct sockaddr *)&addr, sizeof(addr));
 
- printf("%s\n", buf);
+    memset(buf, 0, sizeof(buf));
+    recv(sock, buf, sizeof(buf), 0);
 
- close(sock);
+    char* l_char = strtok_r(buf, delim, &ctx);
+    char* theta_char = strtok_r(NULL, delim, &ctx);
+
+    printf("%s,%s\n", l_char, theta_char);
+
+    close(sock);
+    loop_rate.sleep();
+  }
 
  return 0;
 }
