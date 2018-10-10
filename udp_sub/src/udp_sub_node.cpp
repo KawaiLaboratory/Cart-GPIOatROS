@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 
-int main(){
+int main(int argc, char **argv){
   ros::init(argc, argv, "udp_sub");
   ros::NodeHandle n;
   ros::Rate loop_rate(1);
@@ -15,7 +15,7 @@ int main(){
   struct sockaddr_in addr;
 
   char buf[2048];
-  char* delim ~ ",";
+  char* delim = ",";
   char* ctx;
 
   sock = socket(AF_INET, SOCK_DGRAM, 0);
