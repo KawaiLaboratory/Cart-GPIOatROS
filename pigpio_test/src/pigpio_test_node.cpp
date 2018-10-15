@@ -3,7 +3,6 @@
 #include "pigpiod_if2.h"
 #include "math.h"
 
-#define DOT(x, x_prev, dt) (((x)-(x_prev))/(dt))
 #define RAD2DEG(x) ((x)*180./M_PI)
 
 #define HALF 500000 //duty比50%
@@ -67,8 +66,9 @@ int main(int argc, char **argv)
   loop_rate.sleep();
   ros::spinOnce();
 
-  double x_pprev =  l * std::sin(theta); double dx_p = 0.0; //point's x prev position & speed
-  double y_pprev = -l * std::cos(theta); double dy_p = 0.0; //point's y prev position & speed
+  double x_pprev =  l * std::cos(theta-M_PI/2); double dx_p  = 0.0; //point's x prev position & speed
+  double y_pprev =  l * std::sin(theta-M_PI/2); double dy_p  = 0.0; //point's y prev position & speed
+  double dx_pr   =  0.0;                        double dy_pr = 0.0;
 
   double x_p = 0.0; //point's current x position
   double y_p = 0.0; //point's current y position
@@ -96,21 +96,22 @@ int main(int argc, char **argv)
 
     ROS_INFO("%lf", dt);
     if(!lost){
-      x_p =  l * std::sin(theta);
-      y_p = -l * std::cos(theta);
-      alpha = theta - M_PI;
+      alpha = theta - M_PI/2;
+      x_p =  l * std::cos(alpha);
+      y_p =  l * std::sin(alpha);
 
-      dx_p = (x_p - x_pprev)/dt;
-      dy_p = (y_p - y_pprev)/dt;
+      dx_p  = (x_p - x_pprev)/dt;
+      dy_p  = (y_p - y_pprev)/dt;
+      dx_pr = dx_c + dx_p;
 
       ROS_WARN("===================================");
       ROS_INFO("xprev:%lf, yprev:%lf", x_pprev, y_pprev);
       ROS_INFO("x_p:%lf, y_p:%lf", x_p, y_p);
-      ROS_INFO("dxp:%lf, dyp:%lf", dx_p, dy_p);
+      ROS_INFO("dxpr:%lf, dypr:%lf", dx_pr, dy_pr);
 
       if(0.25<x_p*x_p){
         e_x  = x_p;
-        e_xv = dx_p - dx_c;
+        e_xv = dx_pr;
       }else{
         e_x  = -0.0;
         e_xv = -0.0;
@@ -118,7 +119,7 @@ int main(int argc, char **argv)
 
       if(1.0<y_p){
         e_y  = y_p - 0.5;
-        e_yv = dy_p - dy_c;
+        e_yv = dy_pr;
       }else{
         e_y  = 0.0;
         e_yv = 0.0;
@@ -152,8 +153,8 @@ int main(int argc, char **argv)
       v   = R*r/2*(u_r + u_l);
       ohm = R*r/(2*d)*(u_r - u_l);
 
-      dx_c = v*std::cos(ohm*dt+M_PI);
-      dy_c = v*std::sin(ohm*dt+M_PI);
+      dx_c = v*std::cos(ohm*dt+M_PI/2);
+      dy_c = v*std::sin(ohm*dt+M_PI/2);
     }
     x_pprev = x_p;
     y_pprev = y_p;
