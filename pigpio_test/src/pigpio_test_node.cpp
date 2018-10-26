@@ -29,14 +29,18 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan){
   l = 0.0;
   theta = 0.0;
   for(int i = 0; i < count; i++){
-    float rad = fmodf(scan->angle_min + PHASE_DIFF + scan->angle_increment * i, 2*M_PI);
+    float rad = scan->angle_min + scan->angle_increment * i;
+    ROS_INFO("%lf, %lf", std::sin(rad), scan->ranges[i]);
     if(0<std::sin(rad)){
+      ROS_INFO("AAAA");
       if(i == 0 || l > scan->ranges[i]){
+        ROS_INFO("INAAAA");
         l = scan->ranges[i];
         theta = rad;
       }
     }
   }
+  ROS_INFO("%lf, %lf",l,theta);
 }
 
 void changeGPIO(int status){
@@ -71,12 +75,11 @@ int main(int argc, char **argv){
   double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
   double d2x_c = 0.0; double d2y_c = 0.0; // xy座標での加速度
 // 対象点P用変数
-  double x_pprev  = 0.0; double y_pprev = 0.0;  // 離散時間 n-1 での位置 
+  double x_pprev  = 0.0; double y_pprev = 0.0;  // 離散時間 n-1 での位置
   double x_p      = 0.0; double y_p     = 0.0;  // 離散時間 n   での位置
   double dx_pprev = 0.0; double dy_pprev = 0.0; // 離散時間 n-1 での速度
   double dx_p     = 0.0; double dy_p    = 0.0;  // 離散時間 n   での速度
   double d2x_p    = 0.0; double d2y_p   = 0.0;  // 離散時間 n   での加速度
-  double dx_pd    = 0.0; double dy_pd   = 0.0;  // 実際の速度
 // 制御用変数
   double e_x   = 0.0; double e_y   = 0.0; // 位置偏差
   double e_xs  = 0.0; double e_ys  = 0.0; // 速度偏差
@@ -92,14 +95,13 @@ int main(int argc, char **argv){
 
   for (int i = 0; i < 3; i++){
     prev = ros::Time::now();
-    
     loop_rate.sleep();
     ros::spinOnce();
 
     now = ros::Time::now();
     duration = now - prev;
     dt = duration.toSec();
-    
+
     switch(i){
       x_pprev = x_p;                     y_pprev = y_p;
       x_p = l*std::cos(theta-M_PI/2);    y_p = l*std::sin(theta-M_PI/2);
@@ -140,14 +142,14 @@ int main(int argc, char **argv){
 
       if(0.25<x_p*x_p){
         e_x  = KP*x_p;
-        e_xs = KD*dx_pd;
+        e_xs = KD*dx_p;
       }else{
         e_x  = 0.0;
         e_xs = 0.0;
       }
       if(1.0<y_p){
         e_y  = KP*(y_p - 0.5);
-        e_ys = KD*dy_pd;
+        e_ys = KD*dy_p;
       }else{
         e_y  = 0.0;
         e_ys = 0.0;
