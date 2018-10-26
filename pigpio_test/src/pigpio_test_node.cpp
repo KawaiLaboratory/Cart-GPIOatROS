@@ -76,7 +76,7 @@ int main(int argc, char **argv){
   double dx_pprev = 0.0; double dy_pprev = 0.0; // 離散時間 n-1 での速度
   double dx_p     = 0.0; double dy_p    = 0.0;  // 離散時間 n   での速度
   double d2x_p    = 0.0; double d2y_p   = 0.0;  // 離散時間 n   での加速度
-  double dy_pd    = 0.0; double dy_pd   = 0.0;  // 実際の速度
+  double dx_pd    = 0.0; double dy_pd   = 0.0;  // 実際の速度
 // 制御用変数
   double e_x   = 0.0; double e_y   = 0.0; // 位置偏差
   double e_xs  = 0.0; double e_ys  = 0.0; // 速度偏差
