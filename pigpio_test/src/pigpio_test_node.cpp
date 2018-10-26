@@ -21,26 +21,22 @@ static int dirpin[2] = {21, 20};
 static float d = 0.66/2; //タイヤ間距離[m]
 static float r = 0.15/2; //タイヤ半径[m]
 
-double l = 0.0;     //対象点までの距離[m]
+double l =100.0;     //対象点までの距離[m]
 double theta = 0.0; //対象点までの角度[rad]
 
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan){
   int count = scan->scan_time / scan->time_increment;
-  l = 0.0;
+  l = 100.0;
   theta = 0.0;
   for(int i = 0; i < count; i++){
     float rad = scan->angle_min + scan->angle_increment * i;
-    ROS_INFO("%lf, %lf", std::sin(rad), scan->ranges[i]);
     if(0<std::sin(rad)){
-      ROS_INFO("AAAA");
-      if(i == 0 || l > scan->ranges[i]){
-        ROS_INFO("INAAAA");
+      if(scan->ranges[i] < l){
         l = scan->ranges[i];
         theta = rad;
       }
     }
   }
-  ROS_INFO("%lf, %lf",l,theta);
 }
 
 void changeGPIO(int status){
@@ -61,7 +57,7 @@ int main(int argc, char **argv){
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
   ros::Subscriber sub;
-  ros::Rate loop_rate(5);
+  ros::Rate loop_rate(10);
   ros::Time prev;
   ros::Time now;
   ros::Duration duration;
@@ -90,17 +86,25 @@ int main(int argc, char **argv){
   double dt = 0.0;                        // 制御周期
   bool lost = false;                      // 対象点があるかないか
 
-// 対象点Pの初期設定　ここから
   sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
 
+// 対象点Pの初期設定　ここから
   for (int i = 0; i < 3; i++){
     prev = ros::Time::now();
-    loop_rate.sleep();
     ros::spinOnce();
+    loop_rate.sleep();
+
+    while(l==100.0){
+      prev = ros::Time::now();
+      ros::spinOnce();
+      loop_rate.sleep();
+      ROS_INFO("%lf", l);
+    }
 
     now = ros::Time::now();
     duration = now - prev;
     dt = duration.toSec();
+
 
     switch(i){
       x_pprev = x_p;                     y_pprev = y_p;
