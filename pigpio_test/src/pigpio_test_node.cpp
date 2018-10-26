@@ -73,12 +73,13 @@ int main(int argc, char **argv){
 // 対象点P用変数
   double x_pprev  = 0.0; double y_pprev = 0.0;  // 離散時間 n-1 での位置 
   double x_p      = 0.0; double y_p     = 0.0;  // 離散時間 n   での位置
-  double dx_pprev = 0.0; double dyp_prev = 0.0; // 離散時間 n-1 での速度
+  double dx_pprev = 0.0; double dy_pprev = 0.0; // 離散時間 n-1 での速度
   double dx_p     = 0.0; double dy_p    = 0.0;  // 離散時間 n   での速度
   double d2x_p    = 0.0; double d2y_p   = 0.0;  // 離散時間 n   での加速度
+  double dy_pd    = 0.0; double dy_pd   = 0.0;  // 実際の速度
 // 制御用変数
-  double e_x   =　0.0; double e_y   = 0.0; // 位置偏差
-  double e_xs  =　0.0; double e_ys  = 0.0; // 速度偏差
+  double e_x   = 0.0; double e_y   = 0.0; // 位置偏差
+  double e_xs  = 0.0; double e_ys  = 0.0; // 速度偏差
   double e_xa  = 0.0; double e_ya  = 0.0; // 加速度偏差
   double tmpEx = 0.0; double tmpEy = 0.0; // 偏差合計(一時変数)
   double alpha = 0.0;                     // 機体中心から対象点までのずれ角度
@@ -152,10 +153,10 @@ int main(int argc, char **argv){
         e_ys = 0.0;
       }
 
-      tmpEx = e_x + e_xv;
-      tmpEy = e_y + e_yv;
+      tmpEx = e_x + e_xs;
+      tmpEy = e_y + e_ys;
 
-      tmpSqrt = std::sqrt(X_e*X_e+Y_e*Y_e)/(R*r);
+      tmpSqrt = std::sqrt(tmpEx*tmpEx+tmpEy*tmpEy)/(R*r);
 
       u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
       u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
