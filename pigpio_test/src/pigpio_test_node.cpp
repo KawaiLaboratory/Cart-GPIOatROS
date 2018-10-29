@@ -10,6 +10,7 @@
 #define PHASE_DIFF 2*M_PI //位相遅れ[rad]
 #define R 0.0036*M_PI/180.0
 #define KP 0.3
+#define KI 0.1
 #define KD 0.05
 
 int pi;
@@ -39,7 +40,6 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan){
   }
   l= tmpl;
   theta = tmptheta;
-  ROS_INFO("in collback at %lf, %lf", l, theta);
 }
 
 void changeGPIO(int status){
@@ -80,16 +80,16 @@ int main(int argc, char **argv){
   double dx_p     = 0.0; double dy_p    = 0.0;  // 離散時間 n   での速度
   double d2x_p    = 0.0; double d2y_p   = 0.0;  // 離散時間 n   での加速度
 // 制御用変数
-  double e_x   = 0.0; double e_y   = 0.0; // 位置偏差
-  double e_xs  = 0.0; double e_ys  = 0.0; // 速度偏差
-  double e_xa  = 0.0; double e_ya  = 0.0; // 加速度偏差
-  double tmpEx = 0.0; double tmpEy = 0.0; // 偏差合計(一時変数)
-  double alpha = 0.0;                     // 機体中心から対象点までのずれ角度
-  double tmpSqrt = 0.0;                   // 計算量削減のための一時変数
-  double dt = 0.0;                        // 制御周期
-  bool lost = false;                      // 対象点があるかないか
-  bool setupFlg = false;                  // 点の初期設定フラグ
-  int setupCount = 0;                     // 点の初期設定カウント
+  double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
+  double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
+  double u_x     = 0.0; double u_y     = 0.0; // 偏差合計(一時変数)
+  double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
+  double alpha   = 0.0;                       // 機体中心から対象点までのずれ角度
+  double tmpSqrt = 0.0;                       // 計算量削減のための一時変数
+  double dt      = 0.0;                       // 制御周期
+  bool lost = false;                          // 対象点があるかないか
+  bool setupFlg = false;                      // 点の初期設定フラグ
+  int setupCount = 0;                         // 点の初期設定カウント
 
   sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
 
@@ -154,28 +154,33 @@ int main(int argc, char **argv){
 
     if(!lost){
       alpha = theta-M_PI;
-      x_p =  l*std::cos(theta-M_PI/2);
-      y_p =  l*std::sin(theta-M_PI/2);
-      dx_p  = TIMEDIFF(x_p, x_pprev, dt);
-      dy_p  = TIMEDIFF(y_p, y_pprev, dt);
+      x_pprev = x_p;
+      y_pprev = y_p;
+      x_p = l*std::cos(theta-M_PI/2);
+      y_p = l*std::sin(theta-M_PI/2);
+      dx_pprev = dx_p;
+      dy_pprev = dy_p;
+      dx_p = TIMEDIFF(x_p, x_pprev, dt);
+      dy_p = TIMEDIFF(y_p, y_pprev, dt);
+      d2x_p = TIMEDIFF(dx_p, dx_pprev, dt);
+      d2y_p = TIMEDIFF(dy_p, dy_pprev, dt);
+      ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
 
-      if(0.25<x_p*x_p){
-        e_x  = KP*x_p;
-        e_xs = KD*dx_p;
-      }else{
-        e_x  = 0.0;
-        e_xs = 0.0;
-      }
-      if(1.0<y_p){
-        e_y  = KP*(y_p - 0.5);
-        e_ys = KD*dy_p;
-      }else{
-        e_y  = 0.0;
-        e_ys = 0.0;
-      }
+      e_xprev = e_x;
+      e_yprev = e_y;
+      e_x = x_p + dx_p - x_c;
+      e_y = y_p + dy_p - y_c;
 
-      tmpEx = e_x + e_xs;
-      tmpEy = e_y + e_ys;
+      if(e_x*e_x < 0.25)
+        e_x = 0.0;
+      if(y_p < 1.0)
+        e_y = 0.0;
+
+      tmpIx += e_x * dt;
+      tmpIy += e_y * dt;
+
+      tmpEx = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
+      tmpEy = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
 
       tmpSqrt = std::sqrt(tmpEx*tmpEx+tmpEy*tmpEy)/(R*r);
 
@@ -205,8 +210,6 @@ int main(int argc, char **argv){
       dx_c = v*std::cos(ohm*dt+M_PI/2);
       dy_c = v*std::sin(ohm*dt+M_PI/2);
     }
-    x_pprev = x_p;
-    y_pprev = y_p;
   }
 
   // 出力信号の停止
