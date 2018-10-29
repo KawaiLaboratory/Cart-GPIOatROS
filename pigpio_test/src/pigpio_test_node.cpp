@@ -31,7 +31,7 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan){
   for(int i = 0; i < count; i++){
     double rad = scan->angle_min + scan->angle_increment * i;
     if(0<std::sin(rad)){
-      if(scan->ranges[i] < l){
+      if(scan->ranges[i] < tmpl){
         tmpl = scan->ranges[i];
         tmptheta = rad;
       }
@@ -89,15 +89,16 @@ int main(int argc, char **argv){
   double dt = 0.0;                        // 制御周期
   bool lost = false;                      // 対象点があるかないか
 
-  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 360, scanCallback);
+  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
 
 // 対象点Pの初期設定　ここから
+  while(1){
   ros::spinOnce();
   loop_rate.sleep();
 
   ROS_WARN("Scaning Position ...");
   x_pprev = l*std::cos(theta-M_PI/2);
-  y_pprev = l*std::sin(theta-M_PO/2);
+  y_pprev = l*std::sin(theta-M_PI/2);
   ROS_INFO("x0, y0 = %lf, %lf", x_pprev, y_pprev);
 
   prev = ros::Time::now();
@@ -137,9 +138,10 @@ int main(int argc, char **argv){
   dx_pprev = dx_p;
   dy_pprev = dy_p;
   ROS_INFO("d2x0, d2y0 = %lf, %lf", d2x_p, d2y_p);
-      
+
 //対象点Pの初期設定　ここまで
   ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
+}
 
   while(!ros::ok()){ //上確認用、反転消す
     prev = ros::Time::now();
