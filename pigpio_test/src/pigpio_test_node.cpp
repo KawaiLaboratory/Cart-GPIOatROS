@@ -21,22 +21,25 @@ static int dirpin[2] = {21, 20};
 static float d = 0.66/2; //タイヤ間距離[m]
 static float r = 0.15/2; //タイヤ半径[m]
 
-double l =100.0;     //対象点までの距離[m]
+double l =0.0;     //対象点までの距離[m]
 double theta = 0.0; //対象点までの角度[rad]
 
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan){
   int count = scan->scan_time / scan->time_increment;
-  l = 100.0;
-  theta = 0.0;
+  double tmpl = 100.0;
+  double tmptheta = 0.0;
   for(int i = 0; i < count; i++){
-    float rad = scan->angle_min + scan->angle_increment * i;
+    double rad = scan->angle_min + scan->angle_increment * i;
     if(0<std::sin(rad)){
       if(scan->ranges[i] < l){
-        l = scan->ranges[i];
-        theta = rad;
+        tmpl = scan->ranges[i];
+        tmptheta = rad;
       }
     }
   }
+  l= tmpl;
+  theta = tmptheta;
+  ROS_INFO("in collback at %lf, %lf", l, theta);
 }
 
 void changeGPIO(int status){
@@ -86,33 +89,22 @@ int main(int argc, char **argv){
   double dt = 0.0;                        // 制御周期
   bool lost = false;                      // 対象点があるかないか
 
-  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
+  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 360, scanCallback);
 
 // 対象点Pの初期設定　ここから
-  for (int i = 0; i < 3; i++){
-    prev = ros::Time::now();
-    ros::spinOnce();
-    loop_rate.sleep();
+  prev = ros::Time::now();
+  ros::spinOnce();
+  loop_rate.sleep();
 
-    while(l==100.0){
-      prev = ros::Time::now();
-      ros::spinOnce();
-      loop_rate.sleep();
-      ROS_INFO("%lf", l);
-    }
+  now = ros::Time::now();
+  duration = now - prev;
+  dt = duration.toSec();
 
-    now = ros::Time::now();
-    duration = now - prev;
-    dt = duration.toSec();
+  ROS_WARN("Scaning Position ...");
+  x_pprev = l*std::cos(theta-M_PI/2);
+  y_pprev = l*std::sin(theta-M_PO/2);
 
 
-    switch(i){
-      x_pprev = x_p;                     y_pprev = y_p;
-      x_p = l*std::cos(theta-M_PI/2);    y_p = l*std::sin(theta-M_PI/2);
-      case 0:
-        ROS_WARN("Scaning Position ...");
-        break;
-      case 1:
         ROS_WARN("Calculating Speed ...");
         dx_p = TIMEDIFF(x_p, x_pprev, dt); dy_p = TIMEDIFF(y_p, y_pprev, dt);
         break;
