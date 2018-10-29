@@ -92,6 +92,14 @@ int main(int argc, char **argv){
   sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 360, scanCallback);
 
 // 対象点Pの初期設定　ここから
+  ros::spinOnce();
+  loop_rate.sleep();
+
+  ROS_WARN("Scaning Position ...");
+  x_pprev = l*std::cos(theta-M_PI/2);
+  y_pprev = l*std::sin(theta-M_PO/2);
+  ROS_INFO("x0, y0 = %lf, %lf", x_pprev, y_pprev);
+
   prev = ros::Time::now();
   ros::spinOnce();
   loop_rate.sleep();
@@ -100,22 +108,36 @@ int main(int argc, char **argv){
   duration = now - prev;
   dt = duration.toSec();
 
-  ROS_WARN("Scaning Position ...");
-  x_pprev = l*std::cos(theta-M_PI/2);
-  y_pprev = l*std::sin(theta-M_PO/2);
+  ROS_WARN("Calculating Speed ...");
+  x_p = l*std::cos(theta-M_PI/2);
+  y_p = l*std::sin(theta-M_PI/2);
+  dx_pprev = TIMEDIFF(x_p, x_pprev, dt);
+  dy_pprev = TIMEDIFF(y_p, y_pprev, dt);
+  x_pprev = x_p;
+  y_pprev = y_p;
+  ROS_INFO("dx0, dy0 = %lf, %lf", dx_pprev, dy_pprev);
 
+  prev = ros::Time::now();
+  ros::spinOnce();
+  loop_rate.sleep();
 
-        ROS_WARN("Calculating Speed ...");
-        dx_p = TIMEDIFF(x_p, x_pprev, dt); dy_p = TIMEDIFF(y_p, y_pprev, dt);
-        break;
-      case 2:
-        ROS_WARN("Calculating Acceleration ...");
-        dx_pprev = dx_p;                      dy_pprev = dy_p;
-        dx_p  = TIMEDIFF(x_p, x_pprev, dt);   dy_p  = TIMEDIFF(y_p, y_pprev, dt);
-        d2x_p = TIMEDIFF(dx_p, dx_pprev, dt); d2y_p = TIMEDIFF(dy_p, dy_pprev, dt);
-        break;
-    }
-  }
+  now = ros::Time::now();
+  duration = now - prev;
+  dt = duration.toSec();
+
+  ROS_WARN("Calculating Acceleration ...");
+  x_p = l*std::cos(theta-M_PI/2);
+  y_p = l*std::sin(theta-M_PI/2);
+  dx_p = TIMEDIFF(x_p, x_pprev, dt);
+  dy_p = TIMEDIFF(y_p, y_pprev, dt);
+  d2x_p = TIMEDIFF(dx_p, dx_pprev, dt);
+  d2y_p = TIMEDIFF(dy_p, dy_pprev, dt);
+  x_pprev = x_p;
+  y_pprev = y_p;
+  dx_pprev = dx_p;
+  dy_pprev = dy_p;
+  ROS_INFO("d2x0, d2y0 = %lf, %lf", d2x_p, d2y_p);
+      
 //対象点Pの初期設定　ここまで
   ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
 
