@@ -88,12 +88,13 @@ int main(int argc, char **argv){
   double tmpSqrt = 0.0;                   // 計算量削減のための一時変数
   double dt = 0.0;                        // 制御周期
   bool lost = false;                      // 対象点があるかないか
-  int setupCount = 0;                     // 点の初期設定フラグ
+  bool setupFlg = false;                  // 点の初期設定フラグ
+  int setupCount = 0;                     // 点の初期設定カウント
 
   sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
 
-// 対象点Pの初期設定　ここから
-  while(setupCount<4){
+// 対象点Pの初期設定
+  while(!setupFlg){
     prev = ros::Time::now();
     ros::spinOnce();
     loop_rate.sleep();
@@ -135,10 +136,9 @@ int main(int argc, char **argv){
         d2x_p = TIMEDIFF(dx_p, dx_pprev, dt);
         d2y_p = TIMEDIFF(dy_p, dy_pprev, dt);
         ROS_INFO("d2x0, d2y0 = %lf, %lf", d2x_p, d2y_p);
-        setupCount += 1;
+        setupFlg = true;
         break;
     }
-    //対象点Pの初期設定　ここまで
     ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
   }
 
