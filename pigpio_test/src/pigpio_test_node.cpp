@@ -19,8 +19,8 @@ extern int pi;
 static int pwmpin[2] = {18, 19};
 static int dirpin[2] = {21, 20};
 
-static float d = 0.66/2; //タイヤ間距離[m]
-static float r = 0.15/2; //タイヤ半径[m]
+static double d = 0.66/2; //タイヤ間距離[m]
+static double r = 0.15/2; //タイヤ半径[m]
 
 double x_p = 0.0;
 double y_p = 0.0;
@@ -86,8 +86,8 @@ int main(int argc, char **argv){
   while(!setupFlg){
     x_pprev = x_p;
     y_pprev = y_p;
-
     prev = ros::Time::now();
+
     ros::spinOnce();
     loop_rate.sleep();
 
@@ -112,7 +112,9 @@ int main(int argc, char **argv){
     ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p);
   }
 
-  while(!ros::ok()){ //以下治す
+  while(ros::ok()){
+    x_pprev = x_p;
+    y_pprev = y_p;
     prev = ros::Time::now();
 
     loop_rate.sleep();
@@ -122,7 +124,7 @@ int main(int argc, char **argv){
     duration = now - prev;
     dt = duration.toSec();
 
-    if(!lost){
+    //if(!lost){
       alpha = std::atan2(y_p, x_p);
       l     = std::sqrt(y_p*y_p+x_p*x_p);
       dx_p = TIMEDIFF(x_p, x_pprev, dt);
@@ -131,8 +133,8 @@ int main(int argc, char **argv){
 
       e_xprev = e_x;
       e_yprev = e_y;
-      e_x = x_p + dx_p - dx_c;
-      e_y = y_p + dy_p - dy_c;
+      e_x = x_p + dx_p;
+      e_y = y_p + dy_p;
 
       if(e_x*e_x < 0.25)
         e_x = 0.0;
