@@ -63,12 +63,10 @@ int main(int argc, char **argv){
   double u_l   = 0.0; double u_r   = 0.0; // 左右モータへの入力周波数
   double v     = 0.0; double ohm   = 0.0; // 極座標での速度,角速度
   double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
-  double d2x_c = 0.0; double d2y_c = 0.0; // xy座標での加速度
 // 対象点P用変数
   double x_pprev  = 0.0; double y_pprev = 0.0;  // 離散時間 n-1 での位置
   double dx_pprev = 0.0; double dy_pprev = 0.0; // 離散時間 n-1 での速度
   double dx_p     = 0.0; double dy_p    = 0.0;  // 離散時間 n   での速度
-  double d2x_p    = 0.0; double d2y_p   = 0.0;  // 離散時間 n   での加速度
 // 制御用変数
   double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
   double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
@@ -108,21 +106,10 @@ int main(int argc, char **argv){
         dx_p = TIMEDIFF(x_p, x_pprev, dt);
         dy_p = TIMEDIFF(y_p, y_pprev, dt);
         ROS_INFO("dx0, dy0 = %lf, %lf", dx_p, dy_p);
-        setupCount += 1;
-        break;
-      case 2:
-        ROS_WARN_STREAM("Calculating Acceleration ...");
-        dx_pprev = dx_p;
-        dy_pprev = dy_p;
-        dx_p = TIMEDIFF(x_p, x_pprev, dt);
-        dy_p = TIMEDIFF(y_p, y_pprev, dt);
-        d2x_p = TIMEDIFF(dx_p, dx_pprev, dt);
-        d2y_p = TIMEDIFF(dy_p, dy_pprev, dt);
-        ROS_INFO("d2x0, d2y0 = %lf, %lf", d2x_p, d2y_p);
         setupFlg = true;
         break;
     }
-    ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
+    ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p);
   }
 
   while(!ros::ok()){ //以下治す
@@ -136,15 +123,11 @@ int main(int argc, char **argv){
     dt = duration.toSec();
 
     if(!lost){
-      alpha = std::atan2(y_p, x_p)-M_PI;
+      alpha = std::atan2(y_p, x_p);
       l     = std::sqrt(y_p*y_p+x_p*x_p);
-      dx_pprev = dx_p;
-      dy_pprev = dy_p;
       dx_p = TIMEDIFF(x_p, x_pprev, dt);
       dy_p = TIMEDIFF(y_p, y_pprev, dt);
-      d2x_p = TIMEDIFF(dx_p, dx_pprev, dt);
-      d2y_p = TIMEDIFF(dy_p, dy_pprev, dt);
-      ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
+      ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p);
 
       e_xprev = e_x;
       e_yprev = e_y;
