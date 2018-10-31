@@ -30,7 +30,7 @@ void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
   lost = (status->data[0] != 0.0);
   x_p = status->data[1];
   y_p = status->data[2];
-  ROS_INFO("%f, x:%f, y:%f", status->[0], status[1], status[2]);
+  ROS_INFO("%f, x:%f, y:%f", lost, x_p, y_p);
 }
 
 void changeGPIO(int status){
@@ -75,6 +75,7 @@ int main(int argc, char **argv){
   double u_x     = 0.0; double u_y     = 0.0; // 偏差合計(一時変数)
   double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
   double alpha   = 0.0;                       // 機体中心から対象点までのずれ角度
+  double l       = 0.0;
   double tmpSqrt = 0.0;                       // 計算量削減のための一時変数
   double dt      = 0.0;                       // 制御周期
   bool setupFlg = false;                      // 点の初期設定フラグ
@@ -85,6 +86,9 @@ int main(int argc, char **argv){
 
 // 対象点Pの初期設定
   while(!setupFlg){
+    x_pprev = x_p;
+    y_pprev = y_p;
+
     prev = ros::Time::now();
     ros::spinOnce();
     loop_rate.sleep();
@@ -96,18 +100,11 @@ int main(int argc, char **argv){
     switch(setupCount){
       case 0:
         ROS_INFO_STREAM("Scaning Position ...");
-        x_p = l*std::cos(theta-M_PI/2);
-        y_p = l*std::sin(theta-M_PI/2);
-        ROS_INFO("x0, y0 = %lf, %lf", x_p, y_p);
         if(x_p != 0.0 && y_p != 0.0)
           setupCount += 1;
         break;
       case 1:
         ROS_WARN_STREAM("Calculating Speed ...");
-        x_pprev = x_p;
-        y_pprev = y_p;
-        x_p = l*std::cos(theta-M_PI/2);
-        y_p = l*std::sin(theta-M_PI/2);
         dx_p = TIMEDIFF(x_p, x_pprev, dt);
         dy_p = TIMEDIFF(y_p, y_pprev, dt);
         ROS_INFO("dx0, dy0 = %lf, %lf", dx_p, dy_p);
@@ -115,10 +112,6 @@ int main(int argc, char **argv){
         break;
       case 2:
         ROS_WARN_STREAM("Calculating Acceleration ...");
-        x_pprev = x_p;
-        y_pprev = y_p;
-        x_p = l*std::cos(theta-M_PI/2);
-        y_p = l*std::sin(theta-M_PI/2);
         dx_pprev = dx_p;
         dy_pprev = dy_p;
         dx_p = TIMEDIFF(x_p, x_pprev, dt);
@@ -132,7 +125,7 @@ int main(int argc, char **argv){
     ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
   }
 
-  while(ros::ok()){
+  while(!ros::ok()){ //以下治す
     prev = ros::Time::now();
 
     loop_rate.sleep();
@@ -143,11 +136,8 @@ int main(int argc, char **argv){
     dt = duration.toSec();
 
     if(!lost){
-      alpha = theta-M_PI;
-      x_pprev = x_p;
-      y_pprev = y_p;
-      x_p = l*std::cos(theta-M_PI/2);
-      y_p = l*std::sin(theta-M_PI/2);
+      alpha = std::atan2(y_p, x_p)-M_PI;
+      l     = std::sqrt(y_p*y_p+x_p*x_p);
       dx_pprev = dx_p;
       dy_pprev = dy_p;
       dx_p = TIMEDIFF(x_p, x_pprev, dt);
