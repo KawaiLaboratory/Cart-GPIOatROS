@@ -1,7 +1,7 @@
 #include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
 #include "pigpiod_if2.h"
 #include "math.h"
+#include "std_msgs/Float32MultiArray.h"
 
 #define RAD2DEG(x) ((x)*180./M_PI)
 #define TIMEDIFF(now, prev, dt) (((now)-(prev))/(dt))
@@ -22,24 +22,15 @@ static int dirpin[2] = {21, 20};
 static float d = 0.66/2; //タイヤ間距離[m]
 static float r = 0.15/2; //タイヤ半径[m]
 
-double l =0.0;     //対象点までの距離[m]
-double theta = 0.0; //対象点までの角度[rad]
+double x_p = 0.0;
+double y_p = 0.0;
+bool lost = false;                          // 対象点があるかないか
 
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan){
-  int count = scan->scan_time / scan->time_increment;
-  double tmpl = 100.0;
-  double tmptheta = 0.0;
-  for(int i = 0; i < count; i++){
-    double rad = scan->angle_min + scan->angle_increment * i;
-    if(0<std::sin(rad)){
-      if(scan->ranges[i] < tmpl){
-        tmpl = scan->ranges[i];
-        tmptheta = rad;
-      }
-    }
-  }
-  l= tmpl;
-  theta = tmptheta;
+void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
+  lost = (status->data[0] != 0.0);
+  x_p = status->data[1];
+  y_p = status->data[2];
+  ROS_INFO("%f, x:%f, y:%f", status->[0], status[1], status[2]);
 }
 
 void changeGPIO(int status){
@@ -75,7 +66,6 @@ int main(int argc, char **argv){
   double d2x_c = 0.0; double d2y_c = 0.0; // xy座標での加速度
 // 対象点P用変数
   double x_pprev  = 0.0; double y_pprev = 0.0;  // 離散時間 n-1 での位置
-  double x_p      = 0.0; double y_p     = 0.0;  // 離散時間 n   での位置
   double dx_pprev = 0.0; double dy_pprev = 0.0; // 離散時間 n-1 での速度
   double dx_p     = 0.0; double dy_p    = 0.0;  // 離散時間 n   での速度
   double d2x_p    = 0.0; double d2y_p   = 0.0;  // 離散時間 n   での加速度
@@ -87,11 +77,11 @@ int main(int argc, char **argv){
   double alpha   = 0.0;                       // 機体中心から対象点までのずれ角度
   double tmpSqrt = 0.0;                       // 計算量削減のための一時変数
   double dt      = 0.0;                       // 制御周期
-  bool lost = false;                          // 対象点があるかないか
   bool setupFlg = false;                      // 点の初期設定フラグ
   int setupCount = 0;                         // 点の初期設定カウント
 
-  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
+  // sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
+  sub = n.subscribe("/status", 1000, callback);
 
 // 対象点Pの初期設定
   while(!setupFlg){
