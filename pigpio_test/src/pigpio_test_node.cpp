@@ -142,7 +142,7 @@ int main(int argc, char **argv){
     ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf), d2P=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p, d2x_p, d2y_p);
   }
 
-  while(!ros::ok()){ //上確認用、反転消す
+  while(ros::ok()){
     prev = ros::Time::now();
 
     loop_rate.sleep();
@@ -168,8 +168,8 @@ int main(int argc, char **argv){
 
       e_xprev = e_x;
       e_yprev = e_y;
-      e_x = x_p + dx_p - x_c;
-      e_y = y_p + dy_p - y_c;
+      e_x = x_p + dx_p - dx_c;
+      e_y = y_p + dy_p - dy_c;
 
       if(e_x*e_x < 0.25)
         e_x = 0.0;
@@ -179,10 +179,10 @@ int main(int argc, char **argv){
       tmpIx += e_x * dt;
       tmpIy += e_y * dt;
 
-      tmpEx = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
-      tmpEy = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
+      u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
+      u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
 
-      tmpSqrt = std::sqrt(tmpEx*tmpEx+tmpEy*tmpEy)/(R*r);
+      tmpSqrt = std::sqrt(u_x*u_x+u_y*u_y)/(R*r);
 
       u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
       u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
