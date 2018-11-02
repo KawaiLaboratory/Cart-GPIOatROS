@@ -22,14 +22,18 @@ static int dirpin[2] = {21, 20};
 static double d = 0.66/2; //タイヤ間距離[m]
 static double r = 0.15/2; //タイヤ半径[m]
 
-double x_p = 0.0;
-double y_p = 0.0;
+double l = 0.0;
+double theta = 0.0;
 bool lost = false;                          // 対象点があるかないか
 
 void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
   lost = (status->data[0] != 0.0);
-  x_p = status->data[1];
-  y_p = status->data[2];
+  if(!lost){
+    double x_t = status->data[1];
+    double y_t = status->data[2];
+    l = std::sqrt(x_t*x_t+y_t*y_t);
+    theta = std::atan2(y_t, x_t);
+  }
   ROS_INFO("%f, x:%f, y:%f", lost, x_p, y_p);
 }
 
@@ -64,9 +68,10 @@ int main(int argc, char **argv){
   double v     = 0.0; double ohm   = 0.0; // 極座標での速度,角速度
   double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
 // 対象点P用変数
-  double x_pprev  = 0.0; double y_pprev = 0.0;  // 離散時間 n-1 での位置
+  double x_p      = 0.0; double y_p      = 0.0;
+  double x_pprev  = 0.0; double y_pprev  = 0.0;  // 離散時間 n-1 での位置
   double dx_pprev = 0.0; double dy_pprev = 0.0; // 離散時間 n-1 での速度
-  double dx_p     = 0.0; double dy_p    = 0.0;  // 離散時間 n   での速度
+  double dx_p     = 0.0; double dy_p     = 0.0;  // 離散時間 n   での速度
 // 制御用変数
   double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
   double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
