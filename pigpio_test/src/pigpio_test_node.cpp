@@ -66,6 +66,7 @@ int main(int argc, char **argv){
 // カート用変数
   double u_l   = 0.0; double u_r   = 0.0; // 左右モータへの入力周波数
   double v     = 0.0; double ohm   = 0.0; // 極座標での速度,角速度
+  double x_c   = 0.0; double y_c   = 0.0;
   double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
 // 対象点P用変数
   double x_p      = 0.0; double y_p      = 0.0;
@@ -100,6 +101,9 @@ int main(int argc, char **argv){
     duration = now - prev;
     dt = duration.toSec();
 
+    x_p = l * std::cos(theta-M_PI/2);
+    y_p = l * std::sin(theta-M_PI/2);
+
     switch(setupCount){
       case 0:
         ROS_INFO_STREAM("Scaning Position ...");
@@ -122,64 +126,68 @@ int main(int argc, char **argv){
     y_pprev = y_p;
     prev = ros::Time::now();
 
-    loop_rate.sleep();
     ros::spinOnce();
+    loop_rate.sleep();
 
     now = ros::Time::now();
     duration = now - prev;
     dt = duration.toSec();
 
-    //if(!lost){
-      alpha = std::atan2(y_p, x_p);
-      l     = std::sqrt(y_p*y_p+x_p*x_p);
-      dx_p = TIMEDIFF(x_p, x_pprev, dt);
-      dy_p = TIMEDIFF(y_p, y_pprev, dt);
-      ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p);
+    x_p = l * std::cos(theta-M_PI/2);
+    y_p = l * std::sin(theta-M_PI/2);
+    dx_p = TIMEDIFF(x_p, x_pprev, dt);
+    dy_p = TIMEDIFF(y_p, y_pprev, dt);
+    ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p);
 
-      e_xprev = e_x;
-      e_yprev = e_y;
-      e_x = x_p + dx_p;
-      e_y = y_p + dy_p;
 
-      if(e_x*e_x < 0.25)
-        e_x = 0.0;
-      if(y_p < 1.0)
-        e_y = 0.0;
-
-      tmpIx += e_x * dt;
-      tmpIy += e_y * dt;
-
-      u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
-      u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
-
-      tmpSqrt = std::sqrt(u_x*u_x+u_y*u_y)/(R*r);
-
-      u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
-      u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
-
-      if(u_r < 0){
-        gpio_write(pi, dirpin[0], PI_HIGH);
-        u_r = std::fabs(u_r);
-      }else{
-        gpio_write(pi, dirpin[0], PI_LOW);
-      }
-
-      if(u_l < 0){
-        gpio_write(pi, dirpin[1], PI_LOW);
-        u_l = std::fabs(u_l);
-      }else{
-        gpio_write(pi, dirpin[1], PI_HIGH);
-      }
-
-      hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
-      hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
-
-      v   = R*r/2*(u_r + u_l);
-      ohm = R*r/(2*d)*(u_r - u_l);
-
-      dx_c = v*std::cos(ohm*dt+M_PI/2);
-      dy_c = v*std::sin(ohm*dt+M_PI/2);
+    if(lost){
+      x_c += dx_c * dt;
+      y_c += dy_c * dt;
     }
+
+    e_xprev = e_x;
+    e_yprev = e_y;
+    e_x = x_p + dx_p - x_c;
+    e_y = y_p + dy_p - y_c;
+
+    if(e_x*e_x < 0.25)
+      e_x = 0.0;
+    if(y_p < 1.0)
+      e_y = 0.0;
+
+    tmpIx += e_x * dt;
+    tmpIy += e_y * dt;
+
+    u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
+    u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
+
+    tmpSqrt = std::sqrt(u_x*u_x+u_y*u_y)/(R*r);
+
+    u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
+    u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
+
+    if(u_r < 0){
+      gpio_write(pi, dirpin[0], PI_HIGH);
+      u_r = std::fabs(u_r);
+    }else{
+      gpio_write(pi, dirpin[0], PI_LOW);
+    }
+
+    if(u_l < 0){
+      gpio_write(pi, dirpin[1], PI_LOW);
+      u_l = std::fabs(u_l);
+    }else{
+      gpio_write(pi, dirpin[1], PI_HIGH);
+    }
+
+    hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
+    hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
+
+    v   = R*r/2*(u_r + u_l);
+    ohm = R*r/(2*d)*(u_r - u_l);
+
+    dx_c = v*std::cos(ohm*dt+M_PI/2);
+    dy_c = v*std::sin(ohm*dt+M_PI/2);
   }
 
   // 出力信号の停止
