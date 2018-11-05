@@ -158,6 +158,7 @@ int main(int argc, char **argv){
     //else                  e_y = y_p - y_c - 1 + dy_p;;
     else                          e_y =  y_p - y_c - 1;
 
+    ROS_INFO("%lf, %lf", e_x, e_y);
     alpha = std::atan2(y_p-y_c, x_p-x_c);
     l     = std::sqrt((x_p-x_c)*(x_p-x_c)+(y_p-y_c)*(y_p-y_c));
 
@@ -167,6 +168,7 @@ int main(int argc, char **argv){
     x_e = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
     y_e = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
 
+    ROS_INFO("x_e:%lf, y_e:%lf", x_e, y_e);
     tmpSqrt = std::sqrt(x_e*x_e+y_e*y_e)/(R*r);
 
     u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
@@ -192,7 +194,7 @@ int main(int argc, char **argv){
     v   = R*r/2*(u_r + u_l);
     ohm = R*r/(2*d)*(u_r - u_l);
 
-    ROS_INFO("v: %lf", v);
+    ROS_INFO("ur: %lf, ul: %lf", u_r, u_l);
     dx_c = v*std::cos(ohm*dt+M_PI/2);
     dy_c = v*std::sin(ohm*dt+M_PI/2);
   }
