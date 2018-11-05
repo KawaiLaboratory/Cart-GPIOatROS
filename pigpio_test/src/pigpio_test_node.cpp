@@ -10,7 +10,7 @@
 #define PHASE_DIFF 2*M_PI //位相遅れ[rad]
 #define R 0.0036*M_PI/180.0
 #define KP 0.3
-#define KI 0.1
+#define KI 0.0
 #define KD 0.05
 
 int pi;
@@ -191,6 +191,7 @@ int main(int argc, char **argv){
     v   = R*r/2*(u_r + u_l);
     ohm = R*r/(2*d)*(u_r - u_l);
 
+    ROS_INFO("v: %lf", v);
     dx_c = v*std::cos(ohm*dt+M_PI/2);
     dy_c = v*std::sin(ohm*dt+M_PI/2);
   }
