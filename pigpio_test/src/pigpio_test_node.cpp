@@ -141,21 +141,22 @@ int main(int argc, char **argv){
     if(lost){
       x_c += dx_c * dt;
       y_c += dy_c * dt;
+      phi += ohm * dt;
     }else{
       x_c = 0.0;
       y_c = 0.0;
+      phi = M_PI/2;
     }
 
     e_xprev = e_x;
     e_yprev = e_y;
 
     if((x_p-x_c)*(x_p-x_c)<0.25)  e_x = 0.0;
-    else                  e_x = (x_p - x_c)*(x_p - x_c)-0.25 + dx_p;
-    if(y_p - y_c < 1)     e_y = y_p - y_c - 1 + dy_p;
-    else                  e_y = 0.0;
-
-    if(lost)  phi += ohm*dt;
-    else      phi = M_PI/2;
+    //else                  e_x = (x_p - x_c)*(x_p - x_c)-0.25 + dx_p;
+    else                          e_x = (x_p - x_c)*(x_p - x_c) - 0.25;
+    if(y_p - y_c < 1)             e_y = 0.0;
+    //else                  e_y = y_p - y_c - 1 + dy_p;;
+    else                          e_y =  y_p - y_c - 1;
 
     alpha = std::atan2(y_p-y_c, x_p-x_c);
     l     = std::sqrt((x_p-x_c)*(x_p-x_c)+(y_p-y_c)*(y_p-y_c));
