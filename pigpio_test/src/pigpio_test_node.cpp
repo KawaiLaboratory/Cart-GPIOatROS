@@ -193,6 +193,7 @@ int main(int argc, char **argv){
 
     v   = R*r/2*(u_r + u_l);
     ohm = R*r/(2*d)*(u_r - u_l);
+    ROS_INFO("v:%lf", v);
 
     ROS_INFO("ur: %lf, ul: %lf", u_r, u_l);
     dx_c = v*std::cos(ohm*dt+M_PI/2);
