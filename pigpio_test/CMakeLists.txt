@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(pigpio_test)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-pthread -lpigpiod_if2 -lrt)
+add_compile_options(-std=c++11 -pthread -lpigpiod_if2 -lrt)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
 )
+
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
