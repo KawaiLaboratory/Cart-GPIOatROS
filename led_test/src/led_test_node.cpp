@@ -24,13 +24,13 @@ int main(int argc, char **argv){
   set_mode(pi, SETUP_LED, PI_OUTPUT);
   set_mode(pi, DRIVING_LED, PI_OUTPUT);
 
-  gpioSetPullUpDown(SHUTDOWN_PIN, PI_PUD_UP);
-  gpioSetPullUpDown(CLUTCH_PIN, PI_PUD_UP);
-  gpioSetPullUpDown(START_PIN, PI_PUD_UP);
-  gpioSetPullUpDown(SETUP_LED, PI_PUD_DOWN);
-  gpioSetPullUpDown(DRIVING_LED, PI_PUD_DOWN);
+  gpioSetPullUpDown(pi, SHUTDOWN_PIN, PI_PUD_UP);
+  gpioSetPullUpDown(pi, CLUTCH_PIN, PI_PUD_UP);
+  gpioSetPullUpDown(pi, START_PIN, PI_PUD_UP);
+  gpioSetPullUpDown(pi, SETUP_LED, PI_PUD_DOWN);
+  gpioSetPullUpDown(pi, DRIVING_LED, PI_PUD_DOWN);
 
-  printf("GPIO%d is level %d", SHUTDOWN_PIN, gpioRead(SHUTDOWN_PIN));
-  printf("GPIO%d is level %d", CLUTCH_PIN, gpioRead(CLUTCH_PIN));
-  printf("GPIO%d is level %d", START_PIN, gpioRead(START_PIN));
+  printf("GPIO%d is level %d", SHUTDOWN_PIN, gpioRead(pi, SHUTDOWN_PIN));
+  printf("GPIO%d is level %d", CLUTCH_PIN, gpioRead(pi, CLUTCH_PIN));
+  printf("GPIO%d is level %d", START_PIN, gpioRead(pi, START_PIN));
 }
