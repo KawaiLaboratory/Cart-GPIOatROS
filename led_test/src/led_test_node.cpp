@@ -10,7 +10,7 @@ int main(int argc, char **argv){
   ros::NodeHandle n;
   ros::Publisher pub;
   ros::Rate loop_rate(20);
-  
+
   static int flash_pin[2]={38, 40};
 
   pi = pigpio_start("localhost", "8888");
