@@ -6,7 +6,7 @@
 #define CLUTCH_PIN   27
 #define START_PIN    22 
 #define SETUP_LED    26
-#define DRIVING_LED  21
+#define DRIVING_LED  12
 
 int pi;
 extern int pi;
