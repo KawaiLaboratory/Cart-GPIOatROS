@@ -2,39 +2,73 @@
 #include "pigpiod_if2.h"
 #include "math.h"
 
-#define SHUTDOWN_PIN 29
-#define CLUTCH_PIN   31
-#define START_PIN    32 
-#define SETUP_LED    38
-#define DRIVING_LED  40
+#define SHUTDOWN_PIN 17
+#define CLUTCH_PIN   27
+#define START_PIN    22 
+#define SETUP_LED    26
+#define DRIVING_LED  21
 
 int pi;
 extern int pi;
+
+bool changeMode(bool flg){
+  ROS_INFO("change mode");
+  return !flg;
+}
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "led_test");
   ros::NodeHandle n;
   ros::Publisher pub;
-  ros::Rate loop_rate(20);
+  ros::Rate loop_rate(1);
+
+  bool ClutchFlg   = false;
+  bool ShutdownFlg = false;
+  bool InitFlg     = true;
+  bool StartFlg    = true;
 
   pi = pigpio_start("localhost", "8888");
-  set_mode(pi, SHUTDOWN_PIN, PI_OUTPUT);
-  set_mode(pi, CLUTCH_PIN, PI_OUTPUT);
-  set_mode(pi, START_PIN, PI_OUTPUT);
+  set_mode(pi, SHUTDOWN_PIN, PI_INPUT);
+  set_mode(pi, CLUTCH_PIN, PI_INPUT);
+  set_mode(pi, START_PIN, PI_INPUT);
   set_mode(pi, SETUP_LED, PI_OUTPUT);
   set_mode(pi, DRIVING_LED, PI_OUTPUT);
-  
-  gpio_write(pi, SHUTDOWN_PIN, 0);
-  gpio_write(pi, CLUTCH_PIN, 0);
-  gpio_write(pi, START_PIN, 0);
 
-  set_pull_up_down(pi, SHUTDOWN_PIN, PI_PUD_UP);
-  set_pull_up_down(pi, CLUTCH_PIN, PI_PUD_DOWN);
-  set_pull_up_down(pi, START_PIN, PI_PUD_UP);
-  //set_pull_up_down(pi, SETUP_LED, PI_PUD_DOWN);
-  //set_pull_up_down(pi, DRIVING_LED, PI_PUD_DOWN);
+  int clutch_status   = gpio_read(pi, CLUTCH_PIN);
+  int shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
 
-  ROS_INFO("GPIO%d is level %d", SHUTDOWN_PIN, gpio_read(pi, SHUTDOWN_PIN));
-  ROS_INFO("GPIO%d is level %d", CLUTCH_PIN, gpio_read(pi, CLUTCH_PIN));
-  ROS_INFO("GPIO%d is level %d", START_PIN, gpio_read(pi, START_PIN));
+  while(ros::ok()){
+    /*
+    if(InitFlg){
+      ROS_INFO("Please push starting button");
+      StartFlg = callback(pi, START_PIN, FALLING_EDGE, changeMode(StartFlg));
+    }
+
+    if(ClutchFlg && ShutdownFlg){
+      InitFlg = true;
+    }
+      
+    if(shutdown_status == PI_LOW)
+      ShutdownFlg = true;
+    else{
+      ROS_INFO("Please check ShutdownButton");
+      shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
+    }
+
+    if(clutch_status == PI_LOW)
+      ClutchFlg = true;
+    else{
+      ROS_INFO("Please check ClutchButton");
+      clutch_status = gpio_read(pi, CLUTCH_PIN);
+    }
+    */
+    if(InitFlg){
+      gpio_write(pi, SETUP_LED, PI_HIGH);
+    }
+    if(StartFlg){
+      gpio_write(pi, DRIVING_LED, PI_HIGH);
+    }
+
+    loop_rate.sleep();
+  }
 }
