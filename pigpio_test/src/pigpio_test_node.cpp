@@ -51,8 +51,6 @@ void stopPulse(){
   }
 }
 
-
-
 int main(int argc, char **argv){
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;

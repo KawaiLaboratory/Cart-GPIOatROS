@@ -15,7 +15,7 @@ int main(int argc, char **argv){
   ros::init(argc, argv, "led_test");
   ros::NodeHandle n;
   ros::Publisher pub;
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(20);
 
   pi = pigpio_start("localhost", "8888");
   set_mode(pi, SHUTDOWN_PIN, PI_INPUT);
