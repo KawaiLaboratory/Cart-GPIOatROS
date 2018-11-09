@@ -11,21 +11,11 @@
 int pi;
 extern int pi;
 
-bool changeMode(bool flg){
-  ROS_INFO("change mode");
-  return !flg;
-}
-
 int main(int argc, char **argv){
   ros::init(argc, argv, "led_test");
   ros::NodeHandle n;
   ros::Publisher pub;
   ros::Rate loop_rate(1);
-
-  bool ClutchFlg   = false;
-  bool ShutdownFlg = false;
-  bool InitFlg     = true;
-  bool StartFlg    = true;
 
   pi = pigpio_start("localhost", "8888");
   set_mode(pi, SHUTDOWN_PIN, PI_INPUT);
@@ -34,39 +24,45 @@ int main(int argc, char **argv){
   set_mode(pi, SETUP_LED, PI_OUTPUT);
   set_mode(pi, DRIVING_LED, PI_OUTPUT);
 
-  int clutch_status   = gpio_read(pi, CLUTCH_PIN);
-  int shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
+  bool ClutchFlg   = false;
+  bool ShutdownFlg = false;
+  bool InitFlg     = false;
+
+  int clutch_status   = 1;
+  int shutdown_status = 1;
+  int driving_status  = 1;
 
   while(ros::ok()){
-    /*
-    if(InitFlg){
-      ROS_INFO("Please push starting button");
-      StartFlg = callback(pi, START_PIN, FALLING_EDGE, changeMode(StartFlg));
-    }
+    clutch_status   = gpio_read(pi, CLUTCH_PIN);
+    shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
+    driving_status  = gpio_read(pi, START_PIN);
 
-    if(ClutchFlg && ShutdownFlg){
-      InitFlg = true;
-    }
-      
     if(shutdown_status == PI_LOW)
       ShutdownFlg = true;
     else{
       ROS_INFO("Please check ShutdownButton");
-      shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
+      ShutdownFlg = false;
     }
 
     if(clutch_status == PI_LOW)
       ClutchFlg = true;
     else{
       ROS_INFO("Please check ClutchButton");
-      clutch_status = gpio_read(pi, CLUTCH_PIN);
+      ClutchFlg = false;
     }
-    */
-    if(InitFlg){
+
+    if(ClutchFlg && ShutdownFlg){
+      InitFlg = true;
       gpio_write(pi, SETUP_LED, PI_HIGH);
+    }else{
+      InitFlg = false;
+      gpio_write(pi, SETUP_LED, PI_LOW);
     }
-    if(StartFlg){
+
+    if(InitFlg){
       gpio_write(pi, DRIVING_LED, PI_HIGH);
+    }else{
+      gpio_write(pi, DRIVING_LED, PI_LOW);
     }
 
     loop_rate.sleep();
