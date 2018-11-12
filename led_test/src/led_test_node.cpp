@@ -8,8 +8,17 @@
 #define SETUP_LED    26
 #define DRIVING_LED  12
 
+bool drivingFlg = false;
 int pi;
 extern int pi;
+
+void change_mode(){
+  drivingFlg != drivingFlg;
+  if(drivingFlg)
+    gpio_write(pi, DRIVING_LED, PI_HIGH);
+  else
+    gpio_write(pi, DRIVING_LED, PI_LOW);
+}
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "led_test");
@@ -30,14 +39,12 @@ int main(int argc, char **argv){
 
   int clutch_status   = 1;
   int shutdown_status = 1;
-  int driving_status  = 1;
 
   while(ros::ok()){
     clutch_status   = gpio_read(pi, CLUTCH_PIN);
     shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
-    driving_status  = gpio_read(pi, START_PIN);
 
-    if(shutdown_status == PI_LOW)
+    if(shutdown_status == PI_HIGH)
       ShutdownFlg = true;
     else{
       ROS_INFO("Please check ShutdownButton");
@@ -60,11 +67,8 @@ int main(int argc, char **argv){
     }
 
     if(InitFlg){
-      gpio_write(pi, DRIVING_LED, PI_HIGH);
-    }else{
-      gpio_write(pi, DRIVING_LED, PI_LOW);
+      callback(pi, START_PIN, FALLING_EDGE, change_mode);
     }
-
     loop_rate.sleep();
   }
 }
