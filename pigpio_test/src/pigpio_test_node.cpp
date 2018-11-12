@@ -29,10 +29,8 @@ bool lost = true;
 void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
   lost = (status->data[0] != 0.0);
   if(!lost){
-    double x_t = status->data[1];
-    double y_t = status->data[2];
-    y_p = x_t;
-    x_p = -y_t;
+    x_p = -1*status->data[2];
+    y_p = status->data[1];
   }
   ROS_INFO("x:%f, y:%f", x_p, y_p);
 }
@@ -51,14 +49,21 @@ void stopPulse(){
   }
 }
 
+double scaning(){
+  ros::Time prev = ros::Time::now();
+
+  ros::spinOnce();
+  loop_rate.sleep();
+
+  ros::Time now = ros::Time::now();
+  return (now - prev).toSec();
+}
+
 int main(int argc, char **argv){
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
   ros::Subscriber sub;
   ros::Rate loop_rate(20);
-  ros::Time prev;
-  ros::Time now;
-  ros::Duration duration;
 
   pi = pigpio_start("localhost","8888");
   changeGPIO(PI_OUTPUT);
@@ -71,7 +76,6 @@ int main(int argc, char **argv){
   double phi   = M_PI/2;
 // 対象点P用変数
   double x_pprev  = 0.0; double y_pprev  = 0.0;  // 離散時間 n-1 での位置
-  double dx_pprev = 0.0; double dy_pprev = 0.0; // 離散時間 n-1 での速度
   double dx_p     = 0.0; double dy_p     = 0.0;  // 離散時間 n   での速度
 // 制御用変数
   double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
@@ -93,14 +97,8 @@ int main(int argc, char **argv){
   while(!setupFlg){
     x_pprev = x_p;
     y_pprev = y_p;
-    prev = ros::Time::now();
 
-    ros::spinOnce();
-    loop_rate.sleep();
-
-    now = ros::Time::now();
-    duration = now - prev;
-    dt = duration.toSec();
+    dt = scaning();
 
     switch(setupCount){
       case 0:
@@ -122,19 +120,11 @@ int main(int argc, char **argv){
   while(ros::ok()){
     x_pprev = x_p;
     y_pprev = y_p;
-    prev = ros::Time::now();
 
-    ros::spinOnce();
-    loop_rate.sleep();
-
-    now = ros::Time::now();
-    duration = now - prev;
-    dt = duration.toSec();
+    dt = scaning();
 
     dx_p = TIMEDIFF(x_p, x_pprev, dt);
     dy_p = TIMEDIFF(y_p, y_pprev, dt);
-    ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p);
-
 
     if(lost){
       x_c += dx_c * dt;
@@ -149,16 +139,13 @@ int main(int argc, char **argv){
     e_xprev = e_x;
     e_yprev = e_y;
 
-    if((x_p-x_c)*(x_p-x_c)<0.25)  e_x = 0.0;
-    //else                  e_x = (x_p - x_c)*(x_p - x_c)-0.25 + dx_p;
-    else                          e_x = (x_p - x_c)*(x_p - x_c) - 0.25;
-    if(y_p - y_c < 1)             e_y = 0.0;
-    //else                  e_y = y_p - y_c - 1 + dy_p;;
-    else                          e_y =  y_p - y_c - 1;
+    if(std::abs(x_p-x_c)<0.5)      e_x = 0.0;
+    else                           e_x = std::sgn(x_p-x_c)*(std::abs(x_p-x_c));
+    if(0 < y_p-y_c && y_p-y_c < 1) e_y = 0.0;
+    else                           e_y = y_p - y_c;
 
-    ROS_INFO("%lf, %lf", e_x, e_y);
-    alpha = std::atan2(y_p-y_c, x_p-x_c);
-    l     = std::sqrt((x_p-x_c)*(x_p-x_c)+(y_p-y_c)*(y_p-y_c));
+    // alpha = std::atan2(y_p-y_c, x_p-x_c);
+    // l     = std::sqrt((x_p-x_c)*(x_p-x_c)+(y_p-y_c)*(y_p-y_c));
 
     tmpIx += e_x * dt;
     tmpIy += e_y * dt;
@@ -166,11 +153,13 @@ int main(int argc, char **argv){
     x_e = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
     y_e = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
 
-    ROS_INFO("x_e:%lf, y_e:%lf", x_e, y_e);
     tmpSqrt = std::sqrt(x_e*x_e+y_e*y_e)/(R*r);
 
-    u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
-    u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
+    // u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
+    // u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
+
+    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)+d/(R*r*dt)*(std::atan2(y_e, x_e)-M_PI/2);
+    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)-d/(R*r*dt)*(std::atan2(y_e, x_e)-M_PI/2);
 
     if(u_r < 0){
       gpio_write(pi, dirpin[0], PI_HIGH);
