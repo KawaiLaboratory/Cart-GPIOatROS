@@ -8,17 +8,8 @@
 #define SETUP_LED    26
 #define DRIVING_LED  12
 
-bool drivingFlg = false;
 int pi;
 extern int pi;
-
-void change_mode(){
-  drivingFlg != drivingFlg;
-  if(drivingFlg)
-    gpio_write(pi, DRIVING_LED, PI_HIGH);
-  else
-    gpio_write(pi, DRIVING_LED, PI_LOW);
-}
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "led_test");
@@ -67,7 +58,10 @@ int main(int argc, char **argv){
     }
 
     if(InitFlg){
-      callback(pi, START_PIN, FALLING_EDGE, change_mode);
+      if(wait_for_edge(pi, START_PIN, FALLING_EDGE, 1))
+	gpio_write(pi, DRIVING_LED, PI_HIGH);
+      else
+   	gpio_write(pi, DRIVING_LED, PI_LOW);
     }
     loop_rate.sleep();
   }
