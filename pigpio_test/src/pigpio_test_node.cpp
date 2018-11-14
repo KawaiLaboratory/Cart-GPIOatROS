@@ -17,7 +17,7 @@ int pi;
 extern int pi;
 
 static int pwmpin[2] = {18, 19};
-static int dirpin[2] = {21, 20};
+static int dirpin[2] = {20, 21};
 
 static double d = 0.66/2; //タイヤ間距離[m]
 static double r = 0.15/2; //タイヤ半径[m]
@@ -148,8 +148,8 @@ int main(int argc, char **argv){
     if(0 < y_p-y_c && y_p-y_c < 1) e_y = 0.0;
     else                           e_y = y_p - y_c;
 
-    // alpha = std::atan2(y_p-y_c, x_p-x_c);
-    // l     = std::sqrt((x_p-x_c)*(x_p-x_c)+(y_p-y_c)*(y_p-y_c));
+    alpha = std::atan2(y_p-y_c, x_p-x_c);
+    l     = std::sqrt((x_p-x_c)*(x_p-x_c)+(y_p-y_c)*(y_p-y_c));
 
     tmpIx += e_x * dt;
     tmpIy += e_y * dt;
@@ -159,24 +159,24 @@ int main(int argc, char **argv){
 
     tmpSqrt = std::sqrt(x_e*x_e+y_e*y_e)/(R*r);
 
-    // u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
-    // u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
+    u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
+    u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
 
-    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)+d/(R*r*dt)*(std::atan2(y_e, x_e)-M_PI/2);
-    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)-d/(R*r*dt)*(std::atan2(y_e, x_e)-M_PI/2);
-
+    //u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)+d/(R*r)*(std::atan2(y_e, x_e)-M_PI/2);
+    //u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)-d/(R*r)*(std::atan2(y_e, x_e)-M_PI/2);
+    ROS_INFO("r:%lf, l:%lf", u_r, u_l);
     if(u_r < 0){
-      gpio_write(pi, dirpin[0], PI_HIGH);
+      gpio_write(pi, dirpin[0], PI_LOW);
       u_r = std::fabs(u_r);
     }else{
-      gpio_write(pi, dirpin[0], PI_LOW);
+      gpio_write(pi, dirpin[0], PI_HIGH);
     }
 
     if(u_l < 0){
-      gpio_write(pi, dirpin[1], PI_LOW);
+      gpio_write(pi, dirpin[1], PI_HIGH);
       u_l = std::fabs(u_l);
     }else{
-      gpio_write(pi, dirpin[1], PI_HIGH);
+      gpio_write(pi, dirpin[1], PI_LOW);
     }
 
     hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
@@ -184,9 +184,9 @@ int main(int argc, char **argv){
 
     v   = R*r/2*(u_r + u_l);
     ohm = R*r/(2*d)*(u_r - u_l);
-    ROS_INFO("v:%lf", v);
+    //ROS_INFO("v:%lf", v);
 
-    ROS_INFO("ur: %lf, ul: %lf", u_r, u_l);
+    //ROS_INFO("ur: %lf, ul: %lf", u_r, u_l);
     dx_c = v*std::cos(ohm*dt+M_PI/2);
     dy_c = v*std::sin(ohm*dt+M_PI/2);
   }

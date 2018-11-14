@@ -36,7 +36,7 @@ int main(int argc, char **argv){
     clutch_status   = gpio_read(pi, CLUTCH_PIN);
     shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
 
-    if(shutdown_status == PI_HIGH)
+    if(shutdown_status == PI_LOW)
       ShutdownFlg = true;
     else{
       ROS_INFO("Please check ShutdownButton");
