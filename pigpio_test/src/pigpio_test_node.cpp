@@ -32,7 +32,7 @@ void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
     x_p = -1*status->data[2];
     y_p = status->data[1];
   }
-  ROS_INFO("x:%f, y:%f", x_p, y_p);
+  //ROS_INFO("x:%f, y:%f", x_p, y_p);
 }
 
 void changeGPIO(int status){
@@ -49,7 +49,12 @@ void stopPulse(){
   }
 }
 
+int sgn(double num){
+  return (num>0)-(num<0);
+}
+
 double scaning(){
+  ros::Rate loop_rate(1);
   ros::Time prev = ros::Time::now();
 
   ros::spinOnce();
@@ -63,7 +68,6 @@ int main(int argc, char **argv){
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
   ros::Subscriber sub;
-  ros::Rate loop_rate(20);
 
   pi = pigpio_start("localhost","8888");
   changeGPIO(PI_OUTPUT);
@@ -140,7 +144,7 @@ int main(int argc, char **argv){
     e_yprev = e_y;
 
     if(std::abs(x_p-x_c)<0.5)      e_x = 0.0;
-    else                           e_x = std::sgn(x_p-x_c)*(std::abs(x_p-x_c));
+    else                           e_x = sgn(x_p-x_c)*(std::abs(x_p-x_c));
     if(0 < y_p-y_c && y_p-y_c < 1) e_y = 0.0;
     else                           e_y = y_p - y_c;
 

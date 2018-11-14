@@ -27,6 +27,7 @@ int main(int argc, char **argv){
   bool ClutchFlg   = false;
   bool ShutdownFlg = false;
   bool InitFlg     = false;
+  bool DrivingFlg  = false;
 
   int clutch_status   = 1;
   int shutdown_status = 1;
@@ -59,10 +60,14 @@ int main(int argc, char **argv){
 
     if(InitFlg){
       if(wait_for_edge(pi, START_PIN, FALLING_EDGE, 1))
-	gpio_write(pi, DRIVING_LED, PI_HIGH);
-      else
-   	gpio_write(pi, DRIVING_LED, PI_LOW);
+	DrivingFlg = !DrivingFlg;
     }
+
+    if(DrivingFlg)
+      gpio_write(pi, DRIVING_LED, PI_HIGH);
+    else
+      gpio_write(pi, DRIVING_LED, PI_LOW);
+
     loop_rate.sleep();
   }
 }
