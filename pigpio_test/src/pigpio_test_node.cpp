@@ -80,15 +80,11 @@ int main(int argc, char **argv){
   double phi   = M_PI/2;
 // 対象点P用変数
   double x_pprev  = 0.0; double y_pprev  = 0.0;  // 離散時間 n-1 での位置
-  double dx_p     = 0.0; double dy_p     = 0.0;  // 離散時間 n   での速度
 // 制御用変数
-  double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
-  double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
-  double x_e     = 0.0; double y_e     = 0.0; // 偏差合計(一時変数)
-  double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
-  double alpha   = 0.0;                       // 機体中心から対象点までのずれ角度
-  double l       = 0.0;
-  double theta   = 0.0;
+  double e_x     = 0.0; double e_y     = 0.0; double e_phi     = 0.0; // 位置偏差
+  double e_xprev = 0.0; double e_yprev = 0.0; double e_phiprev = 0.0; // 速度偏差
+  double x_e     = 0.0; double y_e     = 0.0; double phi_e     = 0.0; // 偏差合計(一時変数)
+  double tmpIx   = 0.0; double tmpIy   = 0.0; double tmpIphi   = 0.0; // 積分項
   double tmpSqrt = 0.0;                       // 計算量削減のための一時変数
   double dt      = 0.0;                       // 制御周期
   bool setupFlg = false;                      // 点の初期設定フラグ
@@ -97,7 +93,6 @@ int main(int argc, char **argv){
   // sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
   sub = n.subscribe("/status", 1000, callback);
 
-// 対象点Pの初期設定
   while(!setupFlg){
     x_pprev = x_p;
     y_pprev = y_p;
@@ -108,17 +103,9 @@ int main(int argc, char **argv){
       case 0:
         ROS_INFO_STREAM("Scaning Position ...");
         if(x_p != 0.0 && y_p != 0.0)
-          setupCount += 1;
-        break;
-      case 1:
-        ROS_WARN_STREAM("Calculating Speed ...");
-        dx_p = TIMEDIFF(x_p, x_pprev, dt);
-        dy_p = TIMEDIFF(y_p, y_pprev, dt);
-        ROS_INFO("dx(0), dy(0) = %lf, %lf", dx_p, dy_p);
         setupFlg = true;
         break;
     }
-    ROS_INFO("P=(%2lf, %2lf), dP=(%2lf, %2lf)", x_p, y_p, dx_p, dy_p);
   }
 
   while(ros::ok()){
@@ -126,9 +113,6 @@ int main(int argc, char **argv){
     y_pprev = y_p;
 
     dt = scaning();
-
-    dx_p = TIMEDIFF(x_p, x_pprev, dt);
-    dy_p = TIMEDIFF(y_p, y_pprev, dt);
 
     if(lost){
       x_c += dx_c * dt;
@@ -140,30 +124,29 @@ int main(int argc, char **argv){
       phi = M_PI/2;
     }
 
-    e_xprev = e_x;
-    e_yprev = e_y;
+    e_xprev   = e_x;
+    e_yprev   = e_y;
+    e_phiprev = e_phi;
 
-    if(std::abs(x_p-x_c)<0.5)      e_x = 0.0;
-    else                           e_x = sgn(x_p-x_c)*(std::abs(x_p-x_c));
-    if(0 < y_p-y_c && y_p-y_c < 1) e_y = 0.0;
-    else                           e_y = y_p - y_c;
+    if(std::abs(x_p-x_c)<0.5)      e_x   = 0.0;
+    else                           e_x   = sgn(x_p-x_c)*(std::abs(x_p-x_c));
+    if(0 < y_p-y_c && y_p-y_c < 1) e_y   = 0.0;
+    else                           e_y   = y_p - y_c;
+    if(e_x == 0.0 && e_y == 0.0)   e_phi = 0.0;
+    else                           e_phi = std::atan2(y_p-y_c, x_p-x_c)-std::atan2(y_c, x_c)-phi;
 
-    alpha = std::atan2(y_p-y_c, x_p-x_c);
-    l     = std::sqrt((x_p-x_c)*(x_p-x_c)+(y_p-y_c)*(y_p-y_c));
+    tmpIx   += e_x * dt;
+    tmpIy   += e_y * dt;
+    tmpIphi += e_phi * dt;
 
-    tmpIx += e_x * dt;
-    tmpIy += e_y * dt;
-
-    x_e = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
-    y_e = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
+    x_e   = KP*e_x   + KI*tmpIx   + KD*TIMEDIFF(e_x, e_xprev, dt);
+    y_e   = KP*e_y   + KI*tmpIy   + KD*TIMEDIFF(e_y, e_yprev, dt);
+    phi_e = KP*e_phi + KI*tmpIphi + KD*TIMEDIFF(e_phi, e_phiprev, dt);
 
     tmpSqrt = std::sqrt(x_e*x_e+y_e*y_e)/(R*r);
 
-    u_r = (1+2*d*std::sin(alpha)/l)*tmpSqrt;
-    u_l = (1-2*d*std::sin(alpha)/l)*tmpSqrt;
-
-    //u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)+d/(R*r)*(std::atan2(y_e, x_e)-M_PI/2);
-    //u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)-d/(R*r)*(std::atan2(y_e, x_e)-M_PI/2);
+    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)+d/(R*r)*phi_e;
+    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)-d/(R*r)*phi_e;
     ROS_INFO("r:%lf, l:%lf", u_r, u_l);
     if(u_r < 0){
       gpio_write(pi, dirpin[0], PI_LOW);
@@ -184,9 +167,7 @@ int main(int argc, char **argv){
 
     v   = R*r/2*(u_r + u_l);
     ohm = R*r/(2*d)*(u_r - u_l);
-    //ROS_INFO("v:%lf", v);
 
-    //ROS_INFO("ur: %lf, ul: %lf", u_r, u_l);
     dx_c = v*std::cos(ohm*dt+M_PI/2);
     dy_c = v*std::sin(ohm*dt+M_PI/2);
   }
