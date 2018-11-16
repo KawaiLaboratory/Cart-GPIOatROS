@@ -9,8 +9,8 @@
 #define HALF 500000 //duty比
 #define PHASE_DIFF 2*M_PI //位相遅れ[rad]
 #define R 0.0036*M_PI/180.0
-#define KP 0.3
-#define KI 0.0
+#define KP 0.1
+#define KI 0.01
 #define KD 0.05
 
 int pi;
@@ -85,7 +85,6 @@ int main(int argc, char **argv){
   double e_xprev = 0.0; double e_yprev = 0.0; double e_phiprev = 0.0; // 速度偏差
   double x_e     = 0.0; double y_e     = 0.0; double phi_e     = 0.0; // 偏差合計(一時変数)
   double tmpIx   = 0.0; double tmpIy   = 0.0; double tmpIphi   = 0.0; // 積分項
-  double tmpSqrt = 0.0;                       // 計算量削減のための一時変数
   double dt      = 0.0;                       // 制御周期
   bool setupFlg = false;                      // 点の初期設定フラグ
   int setupCount = 0;                         // 点の初期設定カウント
@@ -103,7 +102,7 @@ int main(int argc, char **argv){
       case 0:
         ROS_INFO_STREAM("Scaning Position ...");
         if(x_p != 0.0 && y_p != 0.0)
-        setupFlg = true;
+          setupFlg = true;
         break;
     }
   }
@@ -133,21 +132,21 @@ int main(int argc, char **argv){
     if(0 < y_p-y_c && y_p-y_c < 1) e_y   = 0.0;
     else                           e_y   = y_p - y_c;
     if(e_x == 0.0 && e_y == 0.0)   e_phi = 0.0;
-    else                           e_phi = std::atan2(y_p-y_c, x_p-x_c)-std::atan2(y_c, x_c)-phi;
+    else                           e_phi = std::atan2(e_y, e_x)-std::atan2(y_c, x_c)-phi;
 
-    tmpIx   += e_x * dt;
-    tmpIy   += e_y * dt;
-    tmpIphi += e_phi * dt;
+    tmpIx   += e_x*dt;
+    tmpIy   += e_y*dt;
+    tmpIphi += e_phi*dt;
 
     x_e   = KP*e_x   + KI*tmpIx   + KD*TIMEDIFF(e_x, e_xprev, dt);
     y_e   = KP*e_y   + KI*tmpIy   + KD*TIMEDIFF(e_y, e_yprev, dt);
     phi_e = KP*e_phi + KI*tmpIphi + KD*TIMEDIFF(e_phi, e_phiprev, dt);
 
-    tmpSqrt = std::sqrt(x_e*x_e+y_e*y_e)/(R*r);
-
     u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)+d/(R*r)*phi_e;
     u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)-d/(R*r)*phi_e;
+
     ROS_INFO("r:%lf, l:%lf", u_r, u_l);
+    
     if(u_r < 0){
       gpio_write(pi, dirpin[0], PI_LOW);
       u_r = std::fabs(u_r);
