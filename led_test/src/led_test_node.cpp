@@ -60,7 +60,7 @@ int main(int argc, char **argv){
 
     if(InitFlg){
       if(wait_for_edge(pi, START_PIN, FALLING_EDGE, 1))
-	DrivingFlg = !DrivingFlg;
+        DrivingFlg = !DrivingFlg;
     }
 
     if(DrivingFlg)

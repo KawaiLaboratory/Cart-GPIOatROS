@@ -49,10 +49,6 @@ void stopPulse(){
   }
 }
 
-int sgn(double num){
-  return (num>0)-(num<0);
-}
-
 double scaning(){
   ros::Rate loop_rate(1);
   ros::Time prev = ros::Time::now();
@@ -128,11 +124,11 @@ int main(int argc, char **argv){
     e_phiprev = e_phi;
 
     if(std::abs(x_p-x_c)<0.5)      e_x   = 0.0;
-    else                           e_x   = sgn(x_p-x_c)*(std::abs(x_p-x_c));
+    else                           e_x   = x_p - x_c;
     if(0 < y_p-y_c && y_p-y_c < 1) e_y   = 0.0;
     else                           e_y   = y_p - y_c;
     if(e_x == 0.0 && e_y == 0.0)   e_phi = 0.0;
-    else                           e_phi = std::atan2(e_y, e_x)-std::atan2(y_c, x_c)-phi;
+    else                           e_phi = std::atan2(e_y, e_x)-phi;
 
     tmpIx   += e_x*dt;
     tmpIy   += e_y*dt;
