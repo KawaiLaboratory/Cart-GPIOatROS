@@ -117,7 +117,7 @@ int main(int argc, char **argv){
     else                           e_x   = x_p - x_c;
     if(0 < y_p-y_c && y_p-y_c < 1) e_y   = 0.0;
     else                           e_y   = y_p - y_c;
-    if(e_x == 0.0)                 alpha = 0.0;
+    if(e_x == 0.0 && e_y == 0.0)   alpha = 0.0;
     else                           alpha = std::atan2(e_y, e_x)-phi;
 
     tmpIx   += e_x*dt;
