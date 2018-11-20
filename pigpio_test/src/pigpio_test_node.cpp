@@ -126,11 +126,11 @@ int main(int argc, char **argv){
     x_e   = KP*e_x   + KI*tmpIx   + KD*TIMEDIFF(e_x, e_xprev, dt);
     y_e   = KP*e_y   + KI*tmpIy   + KD*TIMEDIFF(e_y, e_yprev, dt);
 
-    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1+2*d*std::sin(e_phi));
-    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1-2*d*std::sin(e_phi));
+    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1+2*d*std::sin(alpha));
+    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1-2*d*std::sin(alpha));
 
     ROS_INFO("r:%lf, l:%lf", u_r, u_l);
-    
+
     if(u_r < 0){
       gpio_write(pi, dirpin[0], PI_LOW);
       u_r = std::fabs(u_r);
