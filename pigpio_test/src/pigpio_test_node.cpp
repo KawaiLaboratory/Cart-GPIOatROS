@@ -36,16 +36,15 @@ void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
 }
 
 void changeGPIO(int status){
+  if(status == PI_INPUT){
+    for (int i = 0; i < 2; i++){
+      hardware_PWM(pi, pwmpin[i], 0, 0);
+      gpio_write(pi, dirpin[i], PI_LOW);
+    }
+  }
   for (int i = 0; i < 2; i++){
     set_mode(pi, pwmpin[i], status);
     set_mode(pi, dirpin[i], status);
-  }
-}
-
-void stopPulse(){
-  for (int i = 0; i < 2; i++){
-    hardware_PWM(pi, pwmpin[i], 0, 0);
-    gpio_write(pi, dirpin[i], PI_LOW);
   }
 }
 
@@ -74,24 +73,19 @@ int main(int argc, char **argv){
   double x_c   = 0.0; double y_c   = 0.0;
   double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
   double phi   = M_PI/2;
-// 対象点P用変数
-  double x_pprev  = 0.0; double y_pprev  = 0.0;  // 離散時間 n-1 での位置
 // 制御用変数
-  double e_x     = 0.0; double e_y     = 0.0; double e_phi     = 0.0; // 位置偏差
-  double e_xprev = 0.0; double e_yprev = 0.0; double e_phiprev = 0.0; // 速度偏差
-  double x_e     = 0.0; double y_e     = 0.0; double phi_e     = 0.0; // 偏差合計(一時変数)
-  double tmpIx   = 0.0; double tmpIy   = 0.0; double tmpIphi   = 0.0; // 積分項
+  double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
+  double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
+  double x_e     = 0.0; double y_e     = 0.0; // 偏差合計(一時変数)
+  double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
   double dt      = 0.0;                       // 制御周期
+  double alpha   = 0.0; double l       = 0.0; // 角度誤差, 距離誤差
   bool setupFlg = false;                      // 点の初期設定フラグ
   int setupCount = 0;                         // 点の初期設定カウント
 
-  // sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
   sub = n.subscribe("/status", 1000, callback);
 
   while(!setupFlg){
-    x_pprev = x_p;
-    y_pprev = y_p;
-
     dt = scaning();
 
     switch(setupCount){
@@ -104,9 +98,6 @@ int main(int argc, char **argv){
   }
 
   while(ros::ok()){
-    x_pprev = x_p;
-    y_pprev = y_p;
-
     dt = scaning();
 
     if(lost){
@@ -121,25 +112,22 @@ int main(int argc, char **argv){
 
     e_xprev   = e_x;
     e_yprev   = e_y;
-    e_phiprev = e_phi;
 
     if(std::abs(x_p-x_c)<0.5)      e_x   = 0.0;
     else                           e_x   = x_p - x_c;
     if(0 < y_p-y_c && y_p-y_c < 1) e_y   = 0.0;
     else                           e_y   = y_p - y_c;
-    if(e_x == 0.0 && e_y == 0.0)   e_phi = 0.0;
-    else                           e_phi = std::atan2(e_y, e_x)-phi;
+    if(e_x == 0.0)                 alpha = 0.0;
+    else                           alpha = std::atan2(e_y, e_x)-phi;
 
     tmpIx   += e_x*dt;
     tmpIy   += e_y*dt;
-    tmpIphi += e_phi*dt;
 
     x_e   = KP*e_x   + KI*tmpIx   + KD*TIMEDIFF(e_x, e_xprev, dt);
     y_e   = KP*e_y   + KI*tmpIy   + KD*TIMEDIFF(e_y, e_yprev, dt);
-    phi_e = KP*e_phi + KI*tmpIphi + KD*TIMEDIFF(e_phi, e_phiprev, dt);
 
-    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)+d/(R*r)*phi_e;
-    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)-d/(R*r)*phi_e;
+    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1+2*d*std::sin(e_phi));
+    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1-2*d*std::sin(e_phi));
 
     ROS_INFO("r:%lf, l:%lf", u_r, u_l);
     
@@ -166,10 +154,6 @@ int main(int argc, char **argv){
     dx_c = v*std::cos(ohm*dt+M_PI/2);
     dy_c = v*std::sin(ohm*dt+M_PI/2);
   }
-
-  // 出力信号の停止
-  stopPulse();
-
   // PINOUT -> PININ
   changeGPIO(PI_INPUT);
 
