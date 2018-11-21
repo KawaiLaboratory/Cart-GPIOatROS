@@ -32,7 +32,6 @@ void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
     x_p = -1*status->data[2];
     y_p = status->data[1];
   }
-  //ROS_INFO("x:%f, y:%f", x_p, y_p);
 }
 
 void changeGPIO(int status){
@@ -151,8 +150,8 @@ int main(int argc, char **argv){
     v   = R*r/2*(u_r + u_l);
     ohm = R*r/(2*d)*(u_r - u_l);
 
-    dx_c = v*std::cos(ohm*dt+M_PI/2);
-    dy_c = v*std::sin(ohm*dt+M_PI/2);
+    dx_c = v*std::cos(phi);
+    dy_c = v*std::sin(phi);
   }
   // PINOUT -> PININ
   changeGPIO(PI_INPUT);
