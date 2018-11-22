@@ -89,6 +89,7 @@ int main(int argc, char **argv){
   }
 
   while(ros::ok()){
+    /*====入力部分====*/
     if(u_r < 0){
       gpio_write(pi, dirpin[0], PI_LOW);
       u_r = std::fabs(u_r);
@@ -122,6 +123,7 @@ int main(int argc, char **argv){
       phi = M_PI/2;
     }
 
+    /*====比較部分====*/
     dt = scaning();
 
     e_xprev = e_x;
@@ -135,6 +137,8 @@ int main(int argc, char **argv){
 
     alpha = std::atan2(e_y, e_x)-phi;
 
+
+    /*====フィードバック部分====*/
     u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
     u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
     
