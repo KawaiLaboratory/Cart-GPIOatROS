@@ -24,7 +24,7 @@ static int dirpin[2] = {20, 21};  // 回転方向用ピン
 double x_p = 0.0;                 // 目標点のx座標
 double y_p = 0.0;                 // 目標点のy座標
 bool lost = true;                 // 対象の認識T/F
-bool driving_flag = false;
+bool driving_flg = false;
 
 void PointCallback(const std_msgs::Float32MultiArray::ConstPtr& status){
   lost = (status->data[0] != 0.0);
@@ -35,7 +35,7 @@ void PointCallback(const std_msgs::Float32MultiArray::ConstPtr& status){
 }
 
 void FlagCallback(const std_msgs::Bool::ConstPtr& flag){
-  driving_flag = flag->data;
+  driving_flg = flag->data;
 }
 
 void changeGPIO(int status){
@@ -97,7 +97,7 @@ int main(int argc, char **argv){
   }
 
   while(ros::ok()){
-    while(driving_flag){
+    if(driving_flg){
       /*====入力部分====*/
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
@@ -149,12 +149,13 @@ int main(int argc, char **argv){
 
       u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
       u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
-      
+
       u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha));
       u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
+    }else{
+      // PINOUT -> PININ
+      changeGPIO(PI_INPUT);
     }
-    // PINOUT -> PININ
-    changeGPIO(PI_INPUT);
 
     // 終了
     pigpio_stop(pi);
