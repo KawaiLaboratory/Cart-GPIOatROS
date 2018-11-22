@@ -1,10 +1,11 @@
 #include "ros/ros.h"
 #include "pigpiod_if2.h"
 #include "math.h"
+#include "std_msgs/Bool.h"
 
 #define SHUTDOWN_PIN 17
 #define CLUTCH_PIN   27
-#define START_PIN    22 
+#define START_PIN    22
 #define SETUP_LED    26
 #define DRIVING_LED  12
 
@@ -16,6 +17,9 @@ int main(int argc, char **argv){
   ros::NodeHandle n;
   ros::Publisher pub;
   ros::Rate loop_rate(20);
+
+  pub = n.advertise<std_msgs::Bool>("driving_flag", 1000);
+  std_msgs::Bool flag;
 
   pi = pigpio_start("localhost", "8888");
   set_mode(pi, SHUTDOWN_PIN, PI_INPUT);
@@ -29,45 +33,30 @@ int main(int argc, char **argv){
   bool InitFlg     = false;
   bool DrivingFlg  = false;
 
-  int clutch_status   = 1;
-  int shutdown_status = 1;
+  int clutch_status;
+  int shutdown_status;
 
   while(ros::ok()){
     clutch_status   = gpio_read(pi, CLUTCH_PIN);
     shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
 
-    if(shutdown_status == PI_LOW)
-      ShutdownFlg = true;
-    else{
-      ROS_INFO("Please check ShutdownButton");
-      ShutdownFlg = false;
-    }
+    ShutdownFlg = (shutdown_status == PI_HIGH)? true : false;
+    ClutchFlg   = (clutch_status   == PI_LOW) ? true : false;
 
-    if(clutch_status == PI_LOW)
-      ClutchFlg = true;
-    else{
-      ROS_INFO("Please check ClutchButton");
-      ClutchFlg = false;
-    }
-
-    if(ClutchFlg && ShutdownFlg){
-      InitFlg = true;
-      gpio_write(pi, SETUP_LED, PI_HIGH);
-    }else{
-      InitFlg = false;
-      gpio_write(pi, SETUP_LED, PI_LOW);
-    }
+    InitFlg = (ClutchFlg && ShutdownFlg)? true : false;
+    gpio_write(pi, SETUP_LED, InitFlg);
 
     if(InitFlg){
       if(wait_for_edge(pi, START_PIN, FALLING_EDGE, 1))
         DrivingFlg = !DrivingFlg;
     }
 
-    if(DrivingFlg)
-      gpio_write(pi, DRIVING_LED, PI_HIGH);
-    else
-      gpio_write(pi, DRIVING_LED, PI_LOW);
+    gpio_write(pi, DRIVING_LED, DrivingFlg);
 
+    flag.data = DrivingFlg;
+    pub.publish(flag);
+
+    ros::spinOnce();
     loop_rate.sleep();
   }
 }
