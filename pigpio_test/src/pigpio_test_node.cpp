@@ -132,13 +132,12 @@ int main(int argc, char **argv){
     e_x = (std::abs(x_p-x_c)<0.5)? 0.0 : x_p - x_c;
     e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;
 
+    /*====フィードバック部分====*/
     tmpIx += e_x*dt;
     tmpIy += e_y*dt;
 
     alpha = std::atan2(e_y, e_x)-phi;
 
-
-    /*====フィードバック部分====*/
     u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
     u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
     
