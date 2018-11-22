@@ -23,13 +23,18 @@ static int dirpin[2] = {20, 21};  // 回転方向用ピン
 double x_p = 0.0;                 // 目標点のx座標
 double y_p = 0.0;                 // 目標点のy座標
 bool lost = true;                 // 対象の認識T/F
+bool driving_flag = false;
 
-void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
+void PointCallback(const std_msgs::Float32MultiArray::ConstPtr& status){
   lost = (status->data[0] != 0.0);
   if(!lost){
     x_p = -1*status->data[2];
     y_p = status->data[1];
   }
+}
+
+void FlagCallback(const std_msgs::Bool::ConstPtr& flag){
+  driving_flag = flag->data;
 }
 
 void changeGPIO(int status){
@@ -59,7 +64,8 @@ double scaning(){
 int main(int argc, char **argv){
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
-  ros::Subscriber sub;
+  ros::Subscriber p_sub; // LRFのサブスクライバ
+  ros::Subscriber f_sub; // フラグ読み取りのサブスクライバ
 
   pi = pigpio_start("localhost","8888");
   changeGPIO(PI_OUTPUT);
@@ -79,7 +85,8 @@ int main(int argc, char **argv){
   double alpha   = 0.0; double l       = 0.0; // 角度誤差, 距離誤差
   bool setupFlg = false;                      // 点の初期設定フラグ
 
-  sub = n.subscribe("/status", 1000, callback);
+  p_sub = n.subscribe("/status", 1000, PointCallback);
+  f_sub = n.subscribe("/flag", 1000, FlagCallback);
 
   while(!setupFlg){
     dt = scaning();
@@ -89,66 +96,68 @@ int main(int argc, char **argv){
   }
 
   while(ros::ok()){
-    /*====入力部分====*/
-    if(u_r < 0){
-      gpio_write(pi, dirpin[0], PI_LOW);
-      u_r = std::fabs(u_r);
-    }else{
-      gpio_write(pi, dirpin[0], PI_HIGH);
+    while(driving_flag){
+      /*====入力部分====*/
+      if(u_r < 0){
+        gpio_write(pi, dirpin[0], PI_LOW);
+        u_r = std::fabs(u_r);
+      }else{
+        gpio_write(pi, dirpin[0], PI_HIGH);
+      }
+
+      if(u_l < 0){
+        gpio_write(pi, dirpin[1], PI_HIGH);
+        u_l = std::fabs(u_l);
+      }else{
+        gpio_write(pi, dirpin[1], PI_LOW);
+      }
+
+      hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
+      hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
+
+      v   = R*r/2*(u_r + u_l);
+      ohm = R*r/(2*d)*(u_r - u_l);
+
+      dx_c = v*std::cos(phi);
+      dy_c = v*std::sin(phi);
+
+      if(lost){
+        x_c += dx_c * dt;
+        y_c += dy_c * dt;
+        phi += ohm * dt;
+      }else{
+        x_c = 0.0;
+        y_c = 0.0;
+        phi = M_PI/2;
+      }
+
+      /*====比較部分====*/
+      dt = scaning();
+
+      e_xprev = e_x;
+      e_yprev = e_y;
+
+      e_x = (std::abs(x_p-x_c)<0.5)? 0.0 : x_p - x_c;
+      e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;
+
+      /*====フィードバック部分====*/
+      tmpIx += e_x*dt;
+      tmpIy += e_y*dt;
+
+      alpha = std::atan2(e_y, e_x)-phi;
+
+      u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
+      u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
+      
+      u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha));
+      u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
     }
+    // PINOUT -> PININ
+    changeGPIO(PI_INPUT);
 
-    if(u_l < 0){
-      gpio_write(pi, dirpin[1], PI_HIGH);
-      u_l = std::fabs(u_l);
-    }else{
-      gpio_write(pi, dirpin[1], PI_LOW);
-    }
-
-    hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
-    hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
-
-    v   = R*r/2*(u_r + u_l);
-    ohm = R*r/(2*d)*(u_r - u_l);
-
-    dx_c = v*std::cos(phi);
-    dy_c = v*std::sin(phi);
-
-    if(lost){
-      x_c += dx_c * dt;
-      y_c += dy_c * dt;
-      phi += ohm * dt;
-    }else{
-      x_c = 0.0;
-      y_c = 0.0;
-      phi = M_PI/2;
-    }
-
-    /*====比較部分====*/
-    dt = scaning();
-
-    e_xprev = e_x;
-    e_yprev = e_y;
-
-    e_x = (std::abs(x_p-x_c)<0.5)? 0.0 : x_p - x_c;
-    e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;
-
-    /*====フィードバック部分====*/
-    tmpIx += e_x*dt;
-    tmpIy += e_y*dt;
-
-    alpha = std::atan2(e_y, e_x)-phi;
-
-    u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
-    u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
-    
-    u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha));
-    u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
+    // 終了
+    pigpio_stop(pi);
   }
-  // PINOUT -> PININ
-  changeGPIO(PI_INPUT);
-
-  // 終了
-  pigpio_stop(pi);
 
   return 0;
 }
