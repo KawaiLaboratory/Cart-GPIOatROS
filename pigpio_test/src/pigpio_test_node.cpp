@@ -3,28 +3,26 @@
 #include "math.h"
 #include "std_msgs/Float32MultiArray.h"
 
-#define RAD2DEG(x) ((x)*180./M_PI)
+/* --- 時間微分 --- */
 #define TIMEDIFF(now, prev, dt) (((now)-(prev))/(dt))
 
-#define HALF 500000 //duty比
-#define PHASE_DIFF 2*M_PI //位相遅れ[rad]
-#define R 0.0036*M_PI/180.0
-#define KP 0.1
-#define KI 0.01
-#define KD 0.05
+/* --- 各種定数 --- */
+#define HALF 500000         // 周波数のデューティ比[%]
+#define R 0.0036*M_PI/180.0 // モータの分解能[rad]
+#define r 0.15/2            // タイヤ半径[m]
+#define d 0.66/2            // 期待幅/2[m]
+#define KP 0.1              // 比例ゲイン
+#define KI 0.01             // 積分ゲイン #基本的に0
+#define KD 0.05             // 微分ゲイン
 
-int pi;
-extern int pi;
-
-static int pwmpin[2] = {18, 19};
-static int dirpin[2] = {20, 21};
-
-static double d = 0.66/2; //タイヤ間距離[m]
-static double r = 0.15/2; //タイヤ半径[m]
-
-double x_p = 0.0;
-double y_p = 0.0;
-bool lost = true;
+/* --- 各種グローバル変数 --- */
+int pi;                           // GPIO用
+extern int pi;                    // 同上
+static int pwmpin[2] = {18, 19};  // 速度入力用ピン
+static int dirpin[2] = {20, 21};  // 回転方向用ピン
+double x_p = 0.0;                 // 目標点のx座標
+double y_p = 0.0;                 // 目標点のy座標
+bool lost = true;                 // 対象の認識T/F
 
 void callback(const std_msgs::Float32MultiArray::ConstPtr& status){
   lost = (status->data[0] != 0.0);
@@ -70,66 +68,27 @@ int main(int argc, char **argv){
   double u_l   = 0.0; double u_r   = 0.0; // 左右モータへの入力周波数
   double v     = 0.0; double ohm   = 0.0; // 極座標での速度,角速度
   double x_c   = 0.0; double y_c   = 0.0;
-  double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
   double phi   = M_PI/2;
+  double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
 // 制御用変数
   double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
   double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
-  double x_e     = 0.0; double y_e     = 0.0; // 偏差合計(一時変数)
+  double u_x     = 0.0; double u_y     = 0.0; // 偏差合計(一時変数)
   double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
   double dt      = 0.0;                       // 制御周期
   double alpha   = 0.0; double l       = 0.0; // 角度誤差, 距離誤差
   bool setupFlg = false;                      // 点の初期設定フラグ
-  int setupCount = 0;                         // 点の初期設定カウント
 
   sub = n.subscribe("/status", 1000, callback);
 
   while(!setupFlg){
     dt = scaning();
 
-    switch(setupCount){
-      case 0:
-        ROS_INFO_STREAM("Scaning Position ...");
-        if(x_p != 0.0 && y_p != 0.0)
-          setupFlg = true;
-        break;
-    }
+    ROS_INFO_STREAM("Scaning Position ...");
+    setupFlg = (x_p != 0.0 && y_p != 0.0)? true : false;
   }
 
   while(ros::ok()){
-    dt = scaning();
-
-    if(lost){
-      x_c += dx_c * dt;
-      y_c += dy_c * dt;
-      phi += ohm * dt;
-    }else{
-      x_c = 0.0;
-      y_c = 0.0;
-      phi = M_PI/2;
-    }
-
-    e_xprev   = e_x;
-    e_yprev   = e_y;
-
-    if(std::abs(x_p-x_c)<0.5)      e_x   = 0.0;
-    else                           e_x   = x_p - x_c;
-    if(0 < y_p-y_c && y_p-y_c < 1) e_y   = 0.0;
-    else                           e_y   = y_p - y_c;
-    if(e_x == 0.0 && e_y == 0.0)   alpha = 0.0;
-    else                           alpha = std::atan2(e_y, e_x)-phi;
-
-    tmpIx   += e_x*dt;
-    tmpIy   += e_y*dt;
-
-    x_e   = KP*e_x   + KI*tmpIx   + KD*TIMEDIFF(e_x, e_xprev, dt);
-    y_e   = KP*e_y   + KI*tmpIy   + KD*TIMEDIFF(e_y, e_yprev, dt);
-
-    u_r = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1+2*d*std::sin(alpha));
-    u_l = 1/(R*r)*std::sqrt(x_e*x_e+y_e*y_e)*(1-2*d*std::sin(alpha));
-
-    ROS_INFO("r:%lf, l:%lf", u_r, u_l);
-
     if(u_r < 0){
       gpio_write(pi, dirpin[0], PI_LOW);
       u_r = std::fabs(u_r);
@@ -152,6 +111,35 @@ int main(int argc, char **argv){
 
     dx_c = v*std::cos(phi);
     dy_c = v*std::sin(phi);
+
+    if(lost){
+      x_c += dx_c * dt;
+      y_c += dy_c * dt;
+      phi += ohm * dt;
+    }else{
+      x_c = 0.0;
+      y_c = 0.0;
+      phi = M_PI/2;
+    }
+
+    dt = scaning();
+
+    e_xprev = e_x;
+    e_yprev = e_y;
+
+    e_x = (std::abs(x_p-x_c)<0.5)? 0.0 : x_p - x_c;
+    e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;
+
+    tmpIx += e_x*dt;
+    tmpIy += e_y*dt;
+
+    alpha = std::atan2(e_y, e_x)-phi;
+
+    u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
+    u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
+    
+    u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha));
+    u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
   }
   // PINOUT -> PININ
   changeGPIO(PI_INPUT);
