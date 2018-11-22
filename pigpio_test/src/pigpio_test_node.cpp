@@ -2,6 +2,7 @@
 #include "pigpiod_if2.h"
 #include "math.h"
 #include "std_msgs/Float32MultiArray.h"
+#include "std_msgs/Bool.h"
 
 /* --- 時間微分 --- */
 #define TIMEDIFF(now, prev, dt) (((now)-(prev))/(dt))
