@@ -52,7 +52,7 @@ int main(int argc, char **argv){
     }
 
     gpio_write(pi, DRIVING_LED, DrivingFlg);
-
+    ROS_INFO("%d, %d, %d", ShutdownFlg, ClutchFlg, DrivingFlg);
     flag.data = DrivingFlg;
     pub.publish(flag);
 
