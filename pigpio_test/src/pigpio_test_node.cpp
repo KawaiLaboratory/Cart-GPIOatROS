@@ -13,7 +13,7 @@
 #define r 0.15/2            // タイヤ半径[m]
 #define d 0.66/2            // 期待幅/2[m]
 #define KP 0.1              // 比例ゲイン
-#define KI 0.01             // 積分ゲイン #基本的に0
+#define KI 0.0             // 積分ゲイン #基本的に0
 #define KD 0.05             // 微分ゲイン
 
 /* --- 各種グローバル変数 --- */
@@ -97,7 +97,6 @@ int main(int argc, char **argv){
   }
 
   while(ros::ok()){
-    if(driving_flg){
       /*====入力部分====*/
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
@@ -152,14 +151,14 @@ int main(int argc, char **argv){
 
       u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha));
       u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
-    }else{
+      //ROS_INFO("Please push startbutton");
+  }
       // PINOUT -> PININ
-      changeGPIO(PI_INPUT);
-    }
+  changeGPIO(PI_INPUT);
 
     // 終了
     pigpio_stop(pi);
-  }
+  
 
   return 0;
 }

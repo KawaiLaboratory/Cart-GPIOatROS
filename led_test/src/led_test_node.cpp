@@ -19,7 +19,6 @@ int main(int argc, char **argv){
   ros::Rate loop_rate(20);
 
   pub = n.advertise<std_msgs::Bool>("driving_flag", 1000);
-  std_msgs::Bool flag;
 
   pi = pigpio_start("localhost", "8888");
   set_mode(pi, SHUTDOWN_PIN, PI_INPUT);
@@ -37,11 +36,12 @@ int main(int argc, char **argv){
   int shutdown_status;
 
   while(ros::ok()){
+    std_msgs::Bool flag;
     clutch_status   = gpio_read(pi, CLUTCH_PIN);
     shutdown_status = gpio_read(pi, SHUTDOWN_PIN);
 
-    ShutdownFlg = (shutdown_status == PI_HIGH)? true : false;
-    ClutchFlg   = (clutch_status   == PI_LOW) ? true : false;
+    ShutdownFlg = (shutdown_status == PI_LOW)? true : false;
+    ClutchFlg   = (clutch_status   == PI_LOW)? true : false;
 
     InitFlg = (ClutchFlg && ShutdownFlg)? true : false;
     gpio_write(pi, SETUP_LED, InitFlg);
@@ -51,11 +51,12 @@ int main(int argc, char **argv){
         DrivingFlg = !DrivingFlg;
     }
 
-    gpio_write(pi, DRIVING_LED, DrivingFlg);
-    ROS_INFO("%d, %d, %d", ShutdownFlg, ClutchFlg, DrivingFlg);
+    //ROS_INFO("%d, %d, %d", ShutdownFlg, ClutchFlg, DrivingFlg);
     flag.data = DrivingFlg;
     pub.publish(flag);
 
+    gpio_write(pi,DRIVING_LED, DrivingFlg);
+    loop_rate.sleep();
     ros::spinOnce();
     loop_rate.sleep();
   }
