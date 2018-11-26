@@ -84,7 +84,7 @@ int main(int argc, char **argv){
   double u_x     = 0.0; double u_y     = 0.0; // 偏差合計(一時変数)
   double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
   double dt      = 0.0; double time    = 0.0; // 制御周期
-  double alpha   = 0.0; double l       = 0.0; // 角度誤差, 距離誤差
+  double alpha   = 0.0; double l       = 1.0; // 角度誤差, 距離誤差
   bool setupFlg = false;                      // 点の初期設定フラグ
 
   p_sub = n.subscribe("/status", 1000, PointCallback);
@@ -149,13 +149,13 @@ int main(int argc, char **argv){
       tmpIx += e_x*dt;
       tmpIy += e_y*dt;
 
-      alpha = std::atan2(e_y, e_x)-phi;
+      alpha = std::atan2(y_p - y_c, x_p - x_c)-phi;
 
       u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
       u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
 
-      u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha));
-      u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
+      u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha)/l);
+      u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha)/l);
     }else{
       stopPulse();
       changeGPIO(PI_INPUT);
