@@ -71,7 +71,6 @@ int main(int argc, char **argv){
   ros::Subscriber f_sub; // フラグ読み取りのサブスクライバ
 
   pi = pigpio_start("localhost","8888");
-  changeGPIO(PI_OUTPUT);
 
 // カート用変数
   double u_l   = 0.0; double u_r   = 0.0; // 左右モータへの入力周波数
@@ -84,7 +83,7 @@ int main(int argc, char **argv){
   double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
   double u_x     = 0.0; double u_y     = 0.0; // 偏差合計(一時変数)
   double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
-  double dt      = 0.0;                       // 制御周期
+  double dt      = 0.0; double time    = 0.0; // 制御周期
   double alpha   = 0.0; double l       = 0.0; // 角度誤差, 距離誤差
   bool setupFlg = false;                      // 点の初期設定フラグ
 
@@ -100,7 +99,10 @@ int main(int argc, char **argv){
 
   while(ros::ok()){
     if(driving_flg){
+      time = 0.0;
       /*====入力部分====*/
+      changeGPIO(pi, PI_OUTPUT);
+
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
         u_r = std::fabs(u_r);
@@ -156,6 +158,13 @@ int main(int argc, char **argv){
       u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
     }else{
       stopPulse();
+      changeGPIO(PI_INPUT);
+
+      time += scaning();
+      if (time > 30.0){
+        ROS_INFO("system is shutdown!")
+        break;
+      }
     }
   }
 
