@@ -101,7 +101,7 @@ int main(int argc, char **argv){
     if(driving_flg){
       time = 0.0;
       /*====入力部分====*/
-      changeGPIO(pi, PI_OUTPUT);
+      changeGPIO(PI_OUTPUT);
 
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
@@ -162,7 +162,7 @@ int main(int argc, char **argv){
 
       time += scaning();
       if (time > 30.0){
-        ROS_INFO("system is shutdown!")
+        ROS_INFO("system is shutdown!");
         break;
       }
     }
