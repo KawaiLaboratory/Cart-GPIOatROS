@@ -49,6 +49,8 @@ int main(int argc, char **argv){
     if(InitFlg){
       if(wait_for_edge(pi, START_PIN, FALLING_EDGE, 1))
         DrivingFlg = !DrivingFlg;
+    }else{
+      DrivingFlg = false;
     }
 
     //ROS_INFO("%d, %d, %d", ShutdownFlg, ClutchFlg, DrivingFlg);
