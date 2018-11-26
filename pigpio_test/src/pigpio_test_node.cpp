@@ -36,18 +36,20 @@ void PointCallback(const std_msgs::Float32MultiArray::ConstPtr& status){
 
 void FlagCallback(const std_msgs::Bool::ConstPtr& flag){
   driving_flg = flag->data;
+  ROS_INFO("%d", driving_flg);
 }
 
 void changeGPIO(int status){
-  if(status == PI_INPUT){
-    for (int i = 0; i < 2; i++){
-      hardware_PWM(pi, pwmpin[i], 0, 0);
-      gpio_write(pi, dirpin[i], PI_LOW);
-    }
-  }
   for (int i = 0; i < 2; i++){
     set_mode(pi, pwmpin[i], status);
     set_mode(pi, dirpin[i], status);
+  }
+}
+
+void stopPulse(){
+  for (int i = 0; i < 2; i++){
+    hardware_PWM(pi, pwmpin[i], 0, 0);
+    gpio_write(pi, dirpin[i], PI_LOW);
   }
 }
 
@@ -97,6 +99,7 @@ int main(int argc, char **argv){
   }
 
   while(ros::ok()){
+    if(driving_flg){
       /*====入力部分====*/
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
@@ -151,14 +154,17 @@ int main(int argc, char **argv){
 
       u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha));
       u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha));
-      //ROS_INFO("Please push startbutton");
+    }else{
+      stopPulse();
+    }
   }
-      // PINOUT -> PININ
+
+  // PINOUT -> PININ
+  stopPulse();
   changeGPIO(PI_INPUT);
 
-    // 終了
-    pigpio_stop(pi);
-  
+  // 終了
+  pigpio_stop(pi);
 
   return 0;
 }
