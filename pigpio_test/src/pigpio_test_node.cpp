@@ -88,7 +88,7 @@ int main(int argc, char **argv){
   bool setupFlg = false;                      // 点の初期設定フラグ
 
   p_sub = n.subscribe("/status", 1000, PointCallback);
-  f_sub = n.subscribe("/flag", 1000, FlagCallback);
+  f_sub = n.subscribe("/driving_flag", 5, FlagCallback);
 
   while(!setupFlg){
     dt = scaning();
