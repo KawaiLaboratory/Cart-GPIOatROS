@@ -12,9 +12,9 @@
 #define R 0.0036*M_PI/180.0 // モータの分解能[rad]
 #define r 0.15/2            // タイヤ半径[m]
 #define d 0.66/2            // 期待幅/2[m]
-#define KP 0.1              // 比例ゲイン
+#define KP 0.5              // 比例ゲイン
 #define KI 0.0             // 積分ゲイン #基本的に0
-#define KD 0.05             // 微分ゲイン
+#define KD 0.01             // 微分ゲイン
 
 /* --- 各種グローバル変数 --- */
 int pi;                           // GPIO用
