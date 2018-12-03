@@ -78,9 +78,10 @@ int main(int argc, char **argv){
   double x_c   = 0.0; double y_c   = 0.0;
   double phi   = M_PI/2;
   double dx_c  = 0.0; double dy_c  = 0.0; // xy座標での速度
+// 対象点用変数
+  double x_pprev = 0.0; double y_pprev = 0.0;
 // 制御用変数
   double e_x     = 0.0; double e_y     = 0.0; // 位置偏差
-  double e_xprev = 0.0; double e_yprev = 0.0; // 速度偏差
   double u_x     = 0.0; double u_y     = 0.0; // 偏差合計(一時変数)
   double tmpIx   = 0.0; double tmpIy   = 0.0; // 積分項
   double dt      = 0.0; double time    = 0.0; // 制御周期
@@ -139,9 +140,6 @@ int main(int argc, char **argv){
       /*====比較部分====*/
       dt = scaning();
 
-      e_xprev = e_x;
-      e_yprev = e_y;
-
       e_x = (std::abs(x_p-x_c)<0.5)? 0.0 : x_p - x_c;
       e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;
 
@@ -151,11 +149,14 @@ int main(int argc, char **argv){
 
       alpha = std::atan2(y_p - y_c, x_p - x_c)-phi;
 
-      u_x = KP*e_x + KI*tmpIx + KD*TIMEDIFF(e_x, e_xprev, dt);
-      u_y = KP*e_y + KI*tmpIy + KD*TIMEDIFF(e_y, e_yprev, dt);
+      u_x = KP*e_x + KI*tmpIx - KD*TIMEDIFF(x_p, x_pprev, dt);
+      u_y = KP*e_y + KI*tmpIy - KD*TIMEDIFF(y_p, y_pprev, dt);
 
       u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha)/l);
       u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha)/l);
+
+      x_pprev = x_p;
+      y_pprev = y_p;
     }else{
       stopPulse();
       changeGPIO(PI_INPUT);

@@ -42,8 +42,8 @@ int main(int argc, char **argv){
 
     ShutdownFlg = (shutdown_status == PI_LOW)? true : false;
     ClutchFlg   = (clutch_status   == PI_LOW)? true : false;
+    InitFlg     = (ClutchFlg && ShutdownFlg) ? true : false;
 
-    InitFlg = (ClutchFlg && ShutdownFlg)? true : false;
     gpio_write(pi, SETUP_LED, InitFlg);
 
     if(InitFlg){
@@ -53,7 +53,6 @@ int main(int argc, char **argv){
       DrivingFlg = false;
     }
 
-    //ROS_INFO("%d, %d, %d", ShutdownFlg, ClutchFlg, DrivingFlg);
     flag.data = DrivingFlg;
     pub.publish(flag);
 
