@@ -3,6 +3,8 @@
 #include "math.h"
 #include "std_msgs/Float32MultiArray.h"
 #include "std_msgs/Bool.h"
+#include "fstream"
+#include "ctime"
 
 /* --- 時間微分 --- */
 #define TIMEDIFF(now, prev, dt) (((now)-(prev))/(dt))
@@ -12,9 +14,9 @@
 #define R 0.0036*M_PI/180.0 // モータの分解能[rad]
 #define r 0.15/2            // タイヤ半径[m]
 #define d 0.66/2            // 期待幅/2[m]
-#define KP 0.5              // 比例ゲイン
+#define KP 0.4              // 比例ゲイン
 #define KI 0.0             // 積分ゲイン #基本的に0
-#define KD 0.01             // 微分ゲイン
+#define KD 0.05             // 微分ゲイン
 
 /* --- 各種グローバル変数 --- */
 int pi;                           // GPIO用
@@ -36,7 +38,6 @@ void PointCallback(const std_msgs::Float32MultiArray::ConstPtr& status){
 
 void FlagCallback(const std_msgs::Bool::ConstPtr& flag){
   driving_flg = flag->data;
-  ROS_INFO("%d", driving_flg);
 }
 
 void changeGPIO(int status){
@@ -54,7 +55,7 @@ void stopPulse(){
 }
 
 double scaning(){
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(20);
   ros::Time prev = ros::Time::now();
 
   ros::spinOnce();
@@ -91,12 +92,22 @@ int main(int argc, char **argv){
   p_sub = n.subscribe("/status", 1000, PointCallback);
   f_sub = n.subscribe("/driving_flag", 5, FlagCallback);
 
+  // 実験のためのcsv吐き出し用準備
+  std::ofstream fs(std::to_string(std::time(nullptr))+".csv");
+  double time4csv = 0.0;
+  // ここまで
+
   while(!setupFlg){
     dt = scaning();
 
     ROS_INFO_STREAM("Scaning Position ...");
     setupFlg = (x_p != 0.0 && y_p != 0.0)? true : false;
   }
+
+  // csv書き込み
+  fs << "time,xp,xc,yp,yc,phi,ur,ul,kp,ki,kd" << std::endl;
+  fs << time4csv << "," << x_p << "," << x_c << "," << y_p << "," << y_c << "," << phi << ",";
+  fs << u_r << "," << u_l << "," << KP << "," << KI << "," << KD << std::endl;
 
   while(ros::ok()){
     if(driving_flg){
