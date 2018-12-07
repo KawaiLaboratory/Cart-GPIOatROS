@@ -92,7 +92,7 @@ int main(int argc, char **argv){
   p_sub = n.subscribe("/status", 1000, PointCallback);
   f_sub = n.subscribe("/driving_flag", 5, FlagCallback);
 
-  // 実験のためのcsv吐き出し用準備
+  // csv吐き出し用準備(実使用時は消す)
   std::ofstream fs(std::to_string(std::time(nullptr))+".csv");
   double time4csv = 0.0;
   // ここまで
@@ -104,10 +104,11 @@ int main(int argc, char **argv){
     setupFlg = (x_p != 0.0 && y_p != 0.0)? true : false;
   }
 
-  // csv書き込み
-  fs << "time,xp,xc,yp,yc,phi,ur,ul,kp,ki,kd" << std::endl;
+  // csv書き込み(実使用時は消す)
+  fs << "time,xp,xc,yp,yc,phi,ur,ul,lost,kp,ki,kd" << std::endl;
   fs << time4csv << "," << x_p << "," << x_c << "," << y_p << "," << y_c << "," << phi << ",";
-  fs << u_r << "," << u_l << "," << KP << "," << KI << "," << KD << std::endl;
+  fs << u_r << "," << u_l << ","<< lost  << "," << KP << "," << KI << "," << KD << std::endl;
+  // ここまで
 
   while(ros::ok()){
     if(driving_flg){
@@ -168,12 +169,19 @@ int main(int argc, char **argv){
 
       x_pprev = x_p;
       y_pprev = y_p;
+
+      // csv書き込み用(実使用時は消す)
+      time4csv += dt;
+      fs << time4csv << "," << x_p << "," << x_c << "," << y_p << "," << y_c << "," << phi << ",";
+      fs << u_r << "," << u_l << ","<< lost << std::endl;
+      // ここまで
     }else{
       stopPulse();
       changeGPIO(PI_INPUT);
 
       time += scaning();
       if (time > 30.0){
+        fs.close();
         ROS_INFO("system is shutdown!");
         break;
       }
