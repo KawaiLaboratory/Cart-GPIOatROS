@@ -16,7 +16,7 @@
 #define d 0.66/2            // 期待幅/2[m]
 #define KP 0.4              // 比例ゲイン
 #define KI 0.0             // 積分ゲイン #基本的に0
-#define KD 0.05             // 微分ゲイン
+#define KD 0.04             // 微分ゲイン
 
 /* --- 各種グローバル変数 --- */
 int pi;                           // GPIO用
