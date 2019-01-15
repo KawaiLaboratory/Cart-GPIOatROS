@@ -16,7 +16,7 @@
 #define d 0.66/2            // 期待幅/2[m]
 #define KP 0.4              // 比例ゲイン
 #define KI 0.0             // 積分ゲイン #基本的に0
-#define KD 0.05             // 微分ゲイン
+#define KD 0.04             // 微分ゲイン
 
 /* --- 各種グローバル変数 --- */
 int pi;                           // GPIO用
@@ -158,8 +158,6 @@ int main(int argc, char **argv){
 
       e_x = (std::abs(x_p-x_c)<0.5)? 0.0 : x_p - x_c;
       e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;
-      de_x = (e_x == 0.0)? 0.0 : TIMEDIFF(x_p, x_pprev, dt)+dx_c;
-      de_y = (e_y == 0.0)? 0.0 : TIMEDIFF(y_p, y_pprev, dt)+dy_c;
 
       /*====フィードバック部分====*/
       tmpIx += e_x*dt;
@@ -167,8 +165,8 @@ int main(int argc, char **argv){
 
       alpha = std::atan2(y_p - y_c, x_p - x_c)-phi;
 
-      u_x = KP*e_x + KI*tmpIx - KD*de_x;
-      u_y = KP*e_y + KI*tmpIy - KD*de_y;
+      u_x = KP*e_x - KD*dx_c;
+      u_y = KP*e_y - KD*dy_c;
 
       u_r = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1+2*d*std::sin(alpha)/l);
       u_l = 1/(R*r)*std::sqrt(u_x*u_x+u_y*u_y)*(1-2*d*std::sin(alpha)/l);
