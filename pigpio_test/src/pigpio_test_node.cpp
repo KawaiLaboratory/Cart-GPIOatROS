@@ -75,6 +75,7 @@ int main(int argc, char **argv){
 
 // カート用変数
   double u_l   = 0.0; double u_r   = 0.0; // 左右モータへの入力周波数
+  double ul4in = 0.0; double ur4in = 0.0;
   double v     = 0.0; double ohm   = 0.0; // 極座標での速度,角速度
   double x_c   = 0.0; double y_c   = 0.0;
   double phi   = M_PI/2;
@@ -119,20 +120,22 @@ int main(int argc, char **argv){
 
       if(u_r < 0){
         gpio_write(pi, dirpin[0], PI_LOW);
-        u_r = std::fabs(u_r);
+        ur4in = std::fabs(u_r);
       }else{
         gpio_write(pi, dirpin[0], PI_HIGH);
+        ur4in = u_r;
       }
 
       if(u_l < 0){
         gpio_write(pi, dirpin[1], PI_HIGH);
-        u_l = std::fabs(u_l);
+        ul4in = std::fabs(u_l);
       }else{
         gpio_write(pi, dirpin[1], PI_LOW);
+        ul4in = u_l;
       }
 
-      hardware_PWM(pi, pwmpin[0], (int)u_l, HALF);
-      hardware_PWM(pi, pwmpin[1], (int)u_r, HALF);
+      hardware_PWM(pi, pwmpin[0], (int)ul4in, HALF);
+      hardware_PWM(pi, pwmpin[1], (int)ur4in, HALF);
 
       v   = R*r/2*(u_r + u_l);
       ohm = R*r/(2*d)*(u_r - u_l);
