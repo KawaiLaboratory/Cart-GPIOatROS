@@ -40,7 +40,7 @@ int main(int argc, char **argv){
   bool DrivingFlg  = false;               // 運転中フラグ
 
   /*--- 処理簡略化用変数宣言 ---*/
-  int clutch_status　= 0;
+  int clutch_status = 0;
   int shutdown_status = 0;
 
   while(ros::ok()){
