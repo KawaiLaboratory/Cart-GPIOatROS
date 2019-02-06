@@ -96,7 +96,7 @@ int main(int argc, char **argv){
   double alpha   = 0.0; double l       = 1.0; // 角度誤差, 参照距離
   bool setupFlg = false;                      // 点の初期設定フラグ
 
-  /*--- メッセージ購読 ---*/ 
+  /*--- メッセージ購読 ---*/
   p_sub = n.subscribe("/status", 1000, PointCallback);    // 目標点座標及び検出TFの購読
   f_sub = n.subscribe("/driving_flag", 5, FlagCallback);  // 運転開始フラグの購読
 
@@ -121,7 +121,7 @@ int main(int argc, char **argv){
     if(driving_flg){
       time = 0.0;
       /*=== 入力部分 ===*/
-      changeGPIO(PI_OUTPUT);  // モータのGPIOピンを出力状態に変更 
+      changeGPIO(PI_OUTPUT);  // モータのGPIOピンを出力状態に変更
 
       /*--- 入力用に符号変更処理 ---*/
       if(u_r < 0){
@@ -147,7 +147,7 @@ int main(int argc, char **argv){
       v   = R*r/2*(u_r + u_l);
       ohm = R*r/(2*d)*(u_r - u_l);
 
-      /*--- カートのxy座標での速度計算 ---*/ 
+      /*--- カートのxy座標での速度計算 ---*/
       dx_c = v*std::cos(phi);
       dy_c = v*std::sin(phi);
 
@@ -167,7 +167,7 @@ int main(int argc, char **argv){
 
       e_x = (std::abs(x_p-x_c)<0.5)?      0.0 : x_p - x_c;  // x座標の偏差
       e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;  // y座標の偏差
-      alpha = std::atan2(y_p - y_c, x_p - x_c)-phi;　        // 角度偏差
+      alpha = std::atan2(y_p - y_c, x_p - x_c)-phi;         // 角度偏差
 
       /*====フィードバック部分====*/
       tmpIx += e_x*dt;  // xの積分項
@@ -191,7 +191,7 @@ int main(int argc, char **argv){
       changeGPIO(PI_INPUT); // GPIOを入力状態に変更
 
       time += scaning();    // 待機時間の加算
-      
+
       /*--- 停止処理 ---*/
       if (time > 30.0){
         fs.close();
