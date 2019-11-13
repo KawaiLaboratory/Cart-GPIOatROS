@@ -30,21 +30,19 @@ void HCI2Callback(const std_msgs::Float32::ConstPtr& msg){
   hci2_rssi = msg->data;
 }
 
-
-
 int main(int argc, char **argv){
     ros::init(argc, argv, "rssi");
     ros::NodeHandle n;
-   	ros::Rate rate(10);
-  	ros::Subscriber sub0; // HCI0
-  	ros::Subscriber sub1; // HCI1
-  	ros::Subscriber sub2; // HCI2
+    ros::Rate rate(10);
+    ros::Subscriber sub0; // HCI0
+    ros::Subscriber sub1; // HCI1
+    ros::Subscriber sub2; // HCI2
 
-  	sub0 = n.subscribe("/hci0_ave", 5, HCI0Callback);
-  	sub1 = n.subscribe("/hci1_ave", 5, HCI1Callback);
-  	sub2 = n.subscribe("/hci2_ave", 5, HCI2Callback);
+    sub0 = n.subscribe("/hci0_ave", 5, HCI0Callback);
+    sub1 = n.subscribe("/hci1_ave", 5, HCI1Callback);
+    sub2 = n.subscribe("/hci2_ave", 5, HCI2Callback);
 
-  	ofstream log;
+    ofstream log;
     log.open("/home/pi/catkin_ws/src/rssi_test/csvs/rssi.csv", ios::trunc);
     log << "hci0, hci1, hci2" << endl;
 
@@ -53,9 +51,9 @@ int main(int argc, char **argv){
         log << hci1_rssi << ",";
         log << hci2_rssi;
         log << endl;
-  		
-  		ros::spinOnce();
-  		rate.sleep();
+
+        ros::spinOnce();
+        rate.sleep();
     }
 
     system("sudo kill `pidof hcitool` > /dev/null");
