@@ -51,22 +51,27 @@ int main(int argc, char **argv){
         fp=popen("sudo hcidump -i hci0","r");
         flg = false;
 
-        while(fp){
+        while(!flg){
             fgets(s, 256, fp);
             if(strncmp(&s[4], "LE Advertising Report", 21) == 0){
                 for(int i = 0; i < 6; i++){
                     fgets(s, 256, fp);
                     if(i == 1){
-                        if(strncmp(&s[13], mac, 17) == 0) flg = true;
+                        printf("%d\n", i);
+                        if(strncmp(&s[13], mac, 17) == 0){
+                            printf("before\n");
+                            flg = true;
+                            printf("after\n");
+                        }
                     }
                 }
-                if(flg) break;
             }
         }
-
-        pclose(fp);
-
+        printf("out of while\n");
+        //pclose(fp);
+        printf("after close\n");
         rssi = atoi(&s[12]);
+        printf("get rssi\n");
 
         // recording
         log << diff_t(t_zero, time(NULL)) << "," << rssi << endl;
@@ -78,9 +83,10 @@ int main(int argc, char **argv){
 
         msg.data = accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
         pub.publish(msg);
+        printf("published");
 
         ros::spinOnce();
-        rate.sleep();
+        //rate.sleep();
     }
     log.close();
 }
