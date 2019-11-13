@@ -35,7 +35,6 @@ int main(int argc, char **argv){
     const static char mac[18] = "D0:01:00:3E:64:4D";    // Beacon's Mac address
     const static int  width   = 15;                     // filter's max width
 
-    double hci0_rssi = 0;
     bool flg = false;
 
     // recording
@@ -51,27 +50,19 @@ int main(int argc, char **argv){
         fp=popen("sudo hcidump -i hci0","r");
         flg = false;
 
-        while(!flg){
+        while(!flg && ros::ok()){
             fgets(s, 256, fp);
             if(strncmp(&s[4], "LE Advertising Report", 21) == 0){
                 for(int i = 0; i < 6; i++){
                     fgets(s, 256, fp);
                     if(i == 1){
-                        printf("%d\n", i);
-                        if(strncmp(&s[13], mac, 17) == 0){
-                            printf("before\n");
-                            flg = true;
-                            printf("after\n");
-                        }
+                        if(strncmp(&s[13], mac, 17) == 0) flg = true;
                     }
                 }
             }
         }
-        printf("out of while\n");
-        //pclose(fp);
-        printf("after close\n");
+
         rssi = atoi(&s[12]);
-        printf("get rssi\n");
 
         // recording
         log << diff_t(t_zero, time(NULL)) << "," << rssi << endl;
@@ -83,10 +74,9 @@ int main(int argc, char **argv){
 
         msg.data = accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
         pub.publish(msg);
-        printf("published");
 
         ros::spinOnce();
-        //rate.sleep();
     }
     log.close();
+    pclose(fp);
 }

@@ -134,6 +134,8 @@ include_directories(
 add_executable(${PROJECT_NAME}_node src/rssi_test.cpp)
 
 add_executable(hci0_node src/hci0.cpp)
+add_executable(hci1_node src/hci1.cpp)
+add_executable(hci2_node src/hci2.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -150,6 +152,14 @@ target_link_libraries(${PROJECT_NAME}_node
 )
 
 target_link_libraries(hci0_node
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(hci1_node
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(hci2_node
   ${catkin_LIBRARIES}
 )
 
