@@ -18,7 +18,7 @@ int main(int argc, char **argv){
     ros::init(argc, argv, "hci0");
     ros::NodeHandle n;
     ros::Publisher pub;
-    pub = n.advertise<std_msgs::Float32>("hci0_ave", 1000);
+    pub = n.advertise<std_msgs::Float32>("hci0_ave", 5);
     std_msgs::Float32 msg;
     ros::Rate rate(10);
     ros::Time start = ros::Time::now();
