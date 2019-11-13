@@ -62,7 +62,7 @@ int main(int argc, char **argv){
         now = ros::Time::now();
 
         // recording
-        log << (start - now).toSec(); << "," << rssi << endl;
+        log << (start - now).toSec() << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();

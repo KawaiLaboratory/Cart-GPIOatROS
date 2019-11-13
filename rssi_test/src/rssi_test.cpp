@@ -60,7 +60,7 @@ void BLE_hci0(){
         now = ros::Time::now();
 
         // recording
-        log << (start - now).toSec(); << "," << rssi << endl;
+        log << (start - now).toSec() << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();
@@ -112,7 +112,7 @@ void BLE_hci1(){
         now = ros::Time::now();
 
         // recording
-        log << (start - now).toSec(); << "," << rssi << endl;
+        log << (start - now).toSec() << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();
@@ -164,7 +164,7 @@ void BLE_hci2(){
         now = ros::Time::now();
 
         // recording
-        log << (start - now).toSec(); << "," << rssi << endl;
+        log << (start - now).toSec() << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();
