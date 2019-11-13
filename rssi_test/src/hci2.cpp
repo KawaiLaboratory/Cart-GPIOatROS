@@ -33,11 +33,9 @@ int main(int argc, char **argv){
     FILE *fp;                                           // hcidump Command
     const static char mac[18] = "D0:01:00:3E:64:4D";    // Beacon's Mac address
     const static int  width   = 15;                     // filter's max width
-+
     bool flg = false;
 
     // recording
-    time_t t_zero = time(NULL);
     ofstream log;
     log.open("/home/pi/catkin_ws/src/rssi_test/csvs/hci2.csv", ios::trunc);
     log << "time, rssi" << endl;

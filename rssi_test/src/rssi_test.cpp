@@ -21,11 +21,10 @@ double hci0_rssi = 0;
 double hci1_rssi = 0;
 double hci2_rssi = 0;
 
-double diff_t(time_t start, time_t end){
-    return (double)(end - start);
-}
-
 void BLE_hci0(){
+    ros::Time start = ros::Time::now();
+    ros::Time now;
+
     char s[256];                                        // Bluetooth's Data
     char c[256];                                        // Command
     int rssi = 0;                                       // RSSI
@@ -35,37 +34,33 @@ void BLE_hci0(){
     bool flg = false;
 
     // recording
-    time_t t_zero = time(NULL);
     ofstream log;
     log.open("/home/pi/catkin_ws/src/rssi_test/csvs/hci0.csv", ios::trunc);
     log << "time, rssi" << endl;
 
     system("sudo hcitool -i hci0 lescan --pa --du > /dev/null &");
-    printf("hci0");
-    while(true){
+
+    while(ros::ok()){
         fp=popen("sudo hcidump -i hci0","r");
         flg = false;
 
-        while(fp){
+        while(!flg && ros::ok()){
             fgets(s, 256, fp);
             if(strncmp(&s[4], "LE Advertising Report", 21) == 0){
                 for(int i = 0; i < 6; i++){
                     fgets(s, 256, fp);
-                    printf("chk3");
                     if(i == 1){
                         if(strncmp(&s[13], mac, 17) == 0) flg = true;
                     }
                 }
-                if(flg) break;
             }
         }
 
-        pclose(fp);
-
         rssi = atoi(&s[12]);
+        now = ros::Time::now();
 
         // recording
-        log << diff_t(t_zero, time(NULL)) << "," << rssi << endl;
+        log << (start - now).toSec(); << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();
@@ -74,10 +69,14 @@ void BLE_hci0(){
 
         hci0_rssi = accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
     }
+    pclose(fp);
     log.close();
 }
 
 void BLE_hci1(){
+    ros::Time start = ros::Time::now();
+    ros::Time now;
+
     char s[256];                                        // Bluetooth's Data
     char c[256];                                        // Command
     int rssi = 0;                                       // RSSI
@@ -87,17 +86,17 @@ void BLE_hci1(){
     bool flg = false;
 
     // recording
-    time_t t_zero = time(NULL);
     ofstream log;
     log.open("/home/pi/catkin_ws/src/rssi_test/csvs/hci1.csv", ios::trunc);
     log << "time, rssi" << endl;
+
     system("sudo hcitool -i hci1 lescan --pa --du > /dev/null &");
 
-    while(true){
+    while(ros::ok()){
         fp=popen("sudo hcidump -i hci1","r");
         flg = false;
 
-        while(fp){
+        while(!flg && ros::ok()){
             fgets(s, 256, fp);
             if(strncmp(&s[4], "LE Advertising Report", 21) == 0){
                 for(int i = 0; i < 6; i++){
@@ -106,16 +105,14 @@ void BLE_hci1(){
                         if(strncmp(&s[13], mac, 17) == 0) flg = true;
                     }
                 }
-                if(flg) break;
             }
         }
 
-        pclose(fp);
-
         rssi = atoi(&s[12]);
+        now = ros::Time::now();
 
         // recording
-        log << diff_t(t_zero, time(NULL)) << "," << rssi << endl;
+        log << (start - now).toSec(); << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();
@@ -124,10 +121,14 @@ void BLE_hci1(){
 
         hci1_rssi = accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
     }
+    pclose(fp);
     log.close();
 }
 
 void BLE_hci2(){
+    ros::Time start = ros::Time::now();
+    ros::Time now;
+
     char s[256];                                        // Bluetooth's Data
     char c[256];                                        // Command
     int rssi = 0;                                       // RSSI
@@ -137,18 +138,17 @@ void BLE_hci2(){
     bool flg = false;
 
     // recording
-    time_t t_zero = time(NULL);
     ofstream log;
     log.open("/home/pi/catkin_ws/src/rssi_test/csvs/hci2.csv", ios::trunc);
     log << "time, rssi" << endl;
 
     system("sudo hcitool -i hci2 lescan --pa --du > /dev/null &");
 
-    while(true){
+    while(ros::ok()){
         fp=popen("sudo hcidump -i hci2","r");
         flg = false;
 
-        while(fp){
+        while(!flg && ros::ok()){
             fgets(s, 256, fp);
             if(strncmp(&s[4], "LE Advertising Report", 21) == 0){
                 for(int i = 0; i < 6; i++){
@@ -157,16 +157,14 @@ void BLE_hci2(){
                         if(strncmp(&s[13], mac, 17) == 0) flg = true;
                     }
                 }
-                if(flg) break;
             }
         }
 
-        pclose(fp);
-
         rssi = atoi(&s[12]);
+        now = ros::Time::now();
 
         // recording
-        log << diff_t(t_zero, time(NULL)) << "," << rssi << endl;
+        log << (start - now).toSec(); << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();
@@ -175,6 +173,7 @@ void BLE_hci2(){
 
         hci2_rssi = accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
     }
+    pclose(fp);
     log.close();
 }
 

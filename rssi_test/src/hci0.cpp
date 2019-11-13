@@ -24,7 +24,6 @@ int main(int argc, char **argv){
     ros::Time start = ros::Time::now();
     ros::Time now;
 
-
     char s[256];                                        // Bluetooth's Data
     char c[256];                                        // Command
     int rssi = 0;                                       // RSSI
@@ -33,11 +32,9 @@ int main(int argc, char **argv){
     FILE *fp;                                           // hcidump Command
     const static char mac[18] = "D0:01:00:3E:64:4D";    // Beacon's Mac address
     const static int  width   = 15;                     // filter's max width
-+
     bool flg = false;
 
     // recording
-    time_t t_zero = time(NULL);
     ofstream log;
     log.open("/home/pi/catkin_ws/src/rssi_test/csvs/hci0.csv", ios::trunc);
     log << "time, rssi" << endl;
