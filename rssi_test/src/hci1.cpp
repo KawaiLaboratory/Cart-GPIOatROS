@@ -14,10 +14,6 @@
 
 using namespace std;
 
-double diff_t(time_t start, time_t end){
-    return (double)(end - start);
-}
-
 int main(int argc, char **argv){
     ros::init(argc, argv, "hci1");
     ros::NodeHandle n;
@@ -25,6 +21,9 @@ int main(int argc, char **argv){
     pub = n.advertise<std_msgs::Float32>("hci1_ave", 1000);
     std_msgs::Float32 msg;
     ros::Rate rate(10);
+    ros::Time start = ros::Time::now();
+    ros::Time now;
+
 
     char s[256];                                        // Bluetooth's Data
     char c[256];                                        // Command
@@ -34,7 +33,7 @@ int main(int argc, char **argv){
     FILE *fp;                                           // hcidump Command
     const static char mac[18] = "D0:01:00:3E:64:4D";    // Beacon's Mac address
     const static int  width   = 15;                     // filter's max width
-
++
     bool flg = false;
 
     // recording
@@ -63,9 +62,10 @@ int main(int argc, char **argv){
         }
 
         rssi = atoi(&s[12]);
+        now = ros::Time::now();
 
         // recording
-        log << diff_t(t_zero, time(NULL)) << "," << rssi << endl;
+        log << (start - now).toSec(); << "," << rssi << endl;
 
         if(samples.size() > width){
             samples.pop_front();
@@ -77,6 +77,7 @@ int main(int argc, char **argv){
 
         ros::spinOnce();
     }
-    log.close();
     pclose(fp);
+    system("sudo hcitool -i hci1 cmd 08 000c 00 01 > /dev/null");
+    log.close();
 }
