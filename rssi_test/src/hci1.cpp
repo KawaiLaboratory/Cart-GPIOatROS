@@ -74,7 +74,8 @@ int main(int argc, char **argv){
 
         ros::spinOnce();
     }
-    pclose(fp);
     system("sudo hcitool -i hci1 cmd 08 000c 00 01 > /dev/null");
     log.close();
+    pclose(fp);
+    //system("sudo kill `pidof hcidump`");
 }
