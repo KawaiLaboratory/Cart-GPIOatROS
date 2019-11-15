@@ -58,11 +58,9 @@ int main(int argc, char **argv){
     log.close();
     system("sudo kill `pidof hcidump`");
 
-	system("sudo hcitool -i hci0 cmd 08 000c 00 01 > /dev/null");
+    system("sudo hcitool -i hci0 cmd 08 000c 00 01 > /dev/null");
     system("sudo hcitool -i hci1 cmd 08 000c 00 01 > /dev/null");
     system("sudo hcitool -i hci2 cmd 08 000c 00 01 > /dev/null");
 
-	system("sudo kill `pidof hcitool` > /dev/null");
-
-	printf("FINISHED");
+    system("sudo kill `pidof hcitool` > /dev/null");
 }
