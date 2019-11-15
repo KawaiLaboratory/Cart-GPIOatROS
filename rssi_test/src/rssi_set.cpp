@@ -55,7 +55,5 @@ int main(int argc, char **argv){
         ros::spinOnce();
         rate.sleep();
     }
-
-    system("sudo kill `pidof hcitool` > /dev/null");
     log.close();
 }
