@@ -137,7 +137,7 @@ add_executable(hci0_node src/hci0.cpp)
 add_executable(hci1_node src/hci1.cpp)
 add_executable(hci2_node src/hci2.cpp)
 add_executable(rssi_node src/rssi_set.cpp)
-add_executable(rssi_sd_node src/rssi_shutdown.cpp)
+add_executable(rssi_sd_node src/shutdown.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
