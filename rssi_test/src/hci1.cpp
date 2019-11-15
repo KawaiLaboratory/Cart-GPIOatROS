@@ -41,10 +41,9 @@ int main(int argc, char **argv){
     log << "time, rssi" << endl;
 
     system("sudo hcitool -i hci1 lescan --pa --du > /dev/null &");
-
+    fp=popen("sudo hcidump -i hci1","r");
 
     while(ros::ok()){
-        fp=popen("sudo hcidump -i hci1","r");
         flg = false;
 
         while(!flg && ros::ok()){

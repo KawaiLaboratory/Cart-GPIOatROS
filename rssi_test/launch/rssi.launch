@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="rssi_test" name="hci0" type="hci0_node" />
+  <node pkg="rssi_test" name="hci1" type="hci1_node" />
+  <node pkg="rssi_test" name="hci2" type="hci2_node" />
+  <!-- may be combined into one using arguments -->
+  <node pkg="rssi_test" name="rssi_node" type="rssi_node" />
+</launch>
