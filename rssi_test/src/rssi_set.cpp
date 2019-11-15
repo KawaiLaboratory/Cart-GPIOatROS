@@ -33,10 +33,12 @@ void HCI2Callback(const std_msgs::Float32::ConstPtr& msg){
 int main(int argc, char **argv){
     ros::init(argc, argv, "rssi");
     ros::NodeHandle n;
-    ros::Rate rate(10);
+    ros::Rate rate(20);
     ros::Subscriber sub0; // HCI0
     ros::Subscriber sub1; // HCI1
     ros::Subscriber sub2; // HCI2
+    ros::Time start = ros::Time::now();
+    ros::Time now;
 
     sub0 = n.subscribe("/hci0_ave", 5, HCI0Callback);
     sub1 = n.subscribe("/hci1_ave", 5, HCI1Callback);
@@ -44,9 +46,11 @@ int main(int argc, char **argv){
 
     ofstream log;
     log.open("/home/pi/catkin_ws/src/rssi_test/csvs/rssi.csv", ios::trunc);
-    log << "hci0, hci1, hci2" << endl;
+    log << "t, hci0, hci1, hci2" << endl;
 
     while(ros::ok()){
+    	now = ros::Time::now();
+        log << (start - now).toSec() << ",";
         log << hci0_rssi << ",";
         log << hci1_rssi << ",";
         log << hci2_rssi;

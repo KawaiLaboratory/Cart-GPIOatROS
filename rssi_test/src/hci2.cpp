@@ -58,21 +58,23 @@ int main(int argc, char **argv){
             }
         }
 
-        rssi = atoi(&s[12]);
-        now = ros::Time::now();
+        if(ros::ok()){
+            rssi = atoi(&s[12]);
+            now = ros::Time::now();
 
-        // recording
-        log << (start - now).toSec() << "," << rssi << endl;
+            // recording
+            log << (start - now).toSec() << "," << rssi << endl;
 
-        if(samples.size() > width){
-            samples.pop_front();
+            if(samples.size() > width){
+                samples.pop_front();
+            }
+            samples.push_back(rssi);
+
+            msg.data = accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
+            pub.publish(msg);
+        
+            ros::spinOnce();
         }
-        samples.push_back(rssi);
-
-        msg.data = accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
-        pub.publish(msg);
-
-        ros::spinOnce();
     }
     log.close();
 }
