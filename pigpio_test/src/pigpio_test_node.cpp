@@ -6,9 +6,6 @@
 #include "fstream"
 #include "ctime"
 
-/* --- 時間微分関数 --- */
-#define TIMEDIFF(now, prev, dt) (((now)-(prev))/(dt))
-
 /* --- 各種定数 --- */
 #define HALF 500000         // 周波数のデューティ比[%]
 #define R 0.0036*M_PI/180.0 // モータの分解能[rad]
@@ -58,24 +55,16 @@ void stopPulse(){
   }
 }
 
-/*--- ROSのループ用関数 ---*/
-double scaning(){
-  ros::Rate loop_rate(20);
-  ros::Time prev = ros::Time::now();
-
-  ros::spinOnce();
-  loop_rate.sleep();
-
-  ros::Time now = ros::Time::now();
-  return (now - prev).toSec();
-}
-
-
 int main(int argc, char **argv){
   ros::init(argc, argv, "pigpio_test");
   ros::NodeHandle n;
   ros::Subscriber p_sub; // LRFのサブスクライバ
   ros::Subscriber f_sub; // フラグ読み取りのサブスクライバ
+
+  ros::Rate loop_rate(20);
+
+  ros::Time prev;
+  ros::Time now;
 
   pi = pigpio_start("localhost","8888");
 
@@ -101,12 +90,13 @@ int main(int argc, char **argv){
   f_sub = n.subscribe("/driving_flag", 5, FlagCallback);  // 運転開始フラグの購読
 
   /*--- csv吐き出し用準備(実使用時は消す) ---*/
-  std::ofstream fs(std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
+  std::ofstream fs("~/catkin_ws/src/pigpio_test/"+std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
   double time4csv = 0.0;                                        // 記録用時間
 
   /*--- 人物の初期位置の検出 ---*/
   while(!setupFlg){
-    dt = scaning();
+    ros::spinOnce();
+    loop_rate.sleep();
 
     ROS_INFO_STREAM("Scaning Position ...");
     setupFlg = (x_p != 0.0 && y_p != 0.0)? true : false;
@@ -117,7 +107,10 @@ int main(int argc, char **argv){
   fs << time4csv << "," << x_p << "," << x_c << "," << y_p << "," << y_c << "," << phi << ",";
   fs << u_r << "," << u_l << ","<< lost  << "," << KP << "," << KI << "," << KD << std::endl;
 
+  prev = ros::Time::now();
+
   while(ros::ok()){
+    now = ros::Time::now();
     if(driving_flg){
       time = 0.0;
       /*=== 入力部分 ===*/
@@ -163,7 +156,7 @@ int main(int argc, char **argv){
       }
 
       /*====比較部分====*/
-      dt = scaning();   // 制御周期
+      dt = (now-prev).toSec();   // 制御周期
 
       e_x = (std::abs(x_p-x_c)<0.5)?      0.0 : x_p - x_c;  // x座標の偏差
       e_y = (0 < y_p-y_c && y_p-y_c < 1)? 0.0 : y_p - y_c;  // y座標の偏差
@@ -190,7 +183,8 @@ int main(int argc, char **argv){
       stopPulse();          // PWMの停止
       changeGPIO(PI_INPUT); // GPIOを入力状態に変更
 
-      time += scaning();    // 待機時間の加算
+      dt = (now-prev).toSec();
+      time += dt;    // 待機時間の加算
 
       /*--- 停止処理 ---*/
       if (time > 30.0){
@@ -199,6 +193,10 @@ int main(int argc, char **argv){
         break;
       }
     }
+    ros::spinOnce();
+    loop_rate.sleep();
+
+    prev = now;
   }
 
   /*--- 信号出力の停止 ---*/

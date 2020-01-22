@@ -33,7 +33,7 @@ void HCI2Callback(const std_msgs::Float32::ConstPtr& msg){
 int main(int argc, char **argv){
     ros::init(argc, argv, "rssi");
     ros::NodeHandle n;
-    ros::Rate rate(20);
+    ros::Rate rate(10);
     ros::Subscriber sub0; // HCI0
     ros::Subscriber sub1; // HCI1
     ros::Subscriber sub2; // HCI2
@@ -49,7 +49,10 @@ int main(int argc, char **argv){
     log << "t, hci0, hci1, hci2" << endl;
 
     while(ros::ok()){
-    	now = ros::Time::now();
+        now = ros::Time::now();
+
+        printf("%f, %f, %f, %f\n", (start - now).toSec(), hci0_rssi, hci1_rssi, hci2_rssi);
+
         log << (start - now).toSec() << ",";
         log << hci0_rssi << ",";
         log << hci1_rssi << ",";
