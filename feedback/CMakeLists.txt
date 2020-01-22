@@ -9,11 +9,13 @@ add_compile_options(-std=c++17)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 
+set(pigpio_include "/usr/include")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -116,6 +118,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${pigpio_include}
 )
 
 ## Declare a C++ library
@@ -145,8 +148,10 @@ add_executable(${PROJECT_NAME}_node src/feedback_node.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
-  ${catkin_LIBRARIES}
+  ${catkin_LIBRARIES} pigpiod_if2
 )
+
+LINK_DIRECTORIES("/usr/lib")
 
 #############
 ## Install ##

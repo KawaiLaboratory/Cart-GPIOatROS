@@ -12,12 +12,10 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
 )
 
-
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 
 set(pigpio_include "/usr/include")
-
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
