@@ -31,45 +31,45 @@ class Serial{
   private:
     int pi;
     extern int pi;
-    const  int pin_pwm = {18, 19};
-    const  int pin_dir = {20, 21};
+    static int pin_pwm = {18, 19};
+    static int pin_dir = {20, 21};
     int u_r_in = 0;
     int u_l_in = 0;
   public:
     Serial(){
       pi = pigpio_start("localhost","8888");
       for (int i = 0; i < 2; i++){
-        set_mode(pi, pwmpin[i], PI_OUTPUT);
-        set_mode(pi, dirpin[i], PI_OUTPUT);
+        set_mode(pi, pin_pwm[i], PI_OUTPUT);
+        set_mode(pi, pin_dir[i], PI_OUTPUT);
       }
     };
     ~Serial(){
       for (int i = 0; i < 2; i++){
-        hardware_PWM(pi, pwmpin[i], 0, 0);
-        set_mode(pi, pwmpin[i], PI_INPUT);
-        gpio_write(pi, dirpin[i], PI_LOW);
-        set_mode(pi, dirpin[i], PI_INPUT);
+        hardware_PWM(pi, pin_pwm[i], 0, 0);
+        set_mode(pi, pin_pwm[i], PI_INPUT);
+        gpio_write(pi, pin_dir[i], PI_LOW);
+        set_mode(pi, pin_dir[i], PI_INPUT);
       }
       pigpio_stop(pi);
     };
     void input(int u_r, int u_l){
       if(u_r < 0){
-        gpio_write(pi, dirpin[0], PI_LOW);  // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[0], PI_LOW);  // タイヤの回転方向指定
         u_r_in = abs(u_r);                  // 入力周波数指定
       }else{
-        gpio_write(pi, dirpin[0], PI_HIGH); // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[0], PI_HIGH); // タイヤの回転方向指定
         u_r_in = u_r;                       // 入力周波数指定
       }
       if(u_l < 0){
-        gpio_write(pi, dirpin[1], PI_HIGH); // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_HIGH); // タイヤの回転方向指定
         u_l_in = abs(u_l);                  // 入力周波数指定
       }else{
-        gpio_write(pi, dirpin[1], PI_LOW);  // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_LOW);  // タイヤの回転方向指定
         u_l_in = u_l;                       // 入力周波数指定
       }
 
-      hardware_PWM(pi, pwmpin[0], u_l_in, HALF);
-      hardware_PWM(pi, pwmpin[1], u_r_in, HALF);
+      hardware_PWM(pi, pin_pwm[0], u_l_in, HALF);
+      hardware_PWM(pi, pin_pwm[1], u_r_in, HALF);
     };
 };
 
@@ -88,8 +88,8 @@ class Controller{
     const float  r    = 0.15/2;
     const float  T    = 0.66;
     /* saturation */
-    const MAX_V  = 1;
-    const MAX_OM = 1;
+    const float MAX_V  = 1;
+    const float MAX_OM = 1;
     /* カート */
     Cartbot cart;
     /* シリアル */
