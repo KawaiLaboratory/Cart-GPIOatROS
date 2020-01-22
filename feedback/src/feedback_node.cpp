@@ -1,25 +1,21 @@
 #include "ros/ros.h"
-#include "cmath"
+#include "pigpiod_if2.h"
+#include "math.h"
+#include "std_msgs/Float32MultiArray.h"
+#include "std_msgs/Bool.h"
+#include "fstream"
 #include "tuple"
 
 using namespace std;
 
 class Cartbot{
   private:
-    double x;
-    double y;
-    double th;
-    double v;
-    double om;
+    double x  = 0;
+    double y  = 0;
+    double th = M_PI/2;
+    double v  = 0;
+    double om = 0;
   public:
-    Cartbot(){
-      x = 0;
-      y = 0;
-      th = M_PI/2;
-      v = 0;
-      om = 0;
-    };
-
     tuple<double, double, double, double, double> update(double u_v, double u_om, double dt){
       x  = x + u_v * dt * cos(th+u_om*dt/2);
       y  = y + u_v * dt * sin(th+u_om*dt/2);
@@ -28,6 +24,52 @@ class Cartbot{
       om = u_om;
 
       return {x, y, th, v, om};
+    };
+};
+
+class Serial{
+  private:
+    int pi;
+    extern int pi;
+    const  int pin_pwm = {18, 19};
+    const  int pin_dir = {20, 21};
+    int u_r_in = 0;
+    int u_l_in = 0;
+  public:
+    Serial(){
+      pi = pigpio_start("localhost","8888");
+      for (int i = 0; i < 2; i++){
+        set_mode(pi, pwmpin[i], PI_OUTPUT);
+        set_mode(pi, dirpin[i], PI_OUTPUT);
+      }
+    };
+    ~Serial(){
+      for (int i = 0; i < 2; i++){
+        hardware_PWM(pi, pwmpin[i], 0, 0);
+        set_mode(pi, pwmpin[i], PI_INPUT);
+        gpio_write(pi, dirpin[i], PI_LOW);
+        set_mode(pi, dirpin[i], PI_INPUT);
+      }
+      pigpio_stop(pi);
+    };
+    void input(int u_r, int u_l){
+      if(u_r < 0){
+        gpio_write(pi, dirpin[0], PI_LOW);  // タイヤの回転方向指定
+        u_r_in = abs(u_r);                  // 入力周波数指定
+      }else{
+        gpio_write(pi, dirpin[0], PI_HIGH); // タイヤの回転方向指定
+        u_r_in = u_r;                       // 入力周波数指定
+      }
+      if(u_l < 0){
+        gpio_write(pi, dirpin[1], PI_HIGH); // タイヤの回転方向指定
+        u_l_in = abs(u_l);                  // 入力周波数指定
+      }else{
+        gpio_write(pi, dirpin[1], PI_LOW);  // タイヤの回転方向指定
+        u_l_in = u_l;                       // 入力周波数指定
+      }
+
+      hardware_PWM(pi, pwmpin[0], u_l_in, HALF);
+      hardware_PWM(pi, pwmpin[1], u_r_in, HALF);
     };
 };
 
@@ -47,6 +89,8 @@ class Controller{
     const float  T    = 0.66;
     /* カート */
     Cartbot cart;
+    /* シリアル */
+    Serial ser;
     /* 速度入力 */
     double u_v  = 0.0;
     double u_om = 0.0;
@@ -64,8 +108,8 @@ class Controller{
       double y  = get<1>(status);
       double th = get<2>(status);
 
-      x_e  =    (x_r-x)*cos(th) + (y_r-y)*sin(th);
-      y_e  = -1*(x_r-x)*sin(th) + (y_r-y)*cos(th);
+      x_e  = (x_r-x)*cos(th) + (y_r-y)*sin(th);
+      y_e  = (y_r-y)*cos(th) - (x_r-x)*sin(th);
       th_e = th_r-th;
 
       u_v  = v_r*cos(th_e) + Kx*x_e;
