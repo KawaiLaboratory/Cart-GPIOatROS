@@ -87,6 +87,9 @@ class Controller{
     const double R    = 0.0036*M_PI/180.0;
     const float  r    = 0.15/2;
     const float  T    = 0.66;
+    /* saturation */
+    const MAX_V  = 1;
+    const MAX_OM = 1;
     /* カート */
     Cartbot cart;
     /* シリアル */
@@ -115,8 +118,21 @@ class Controller{
       u_v  = v_r*cos(th_e) + Kx*x_e;
       u_om = om_r + Ky*y_e*v_r + Kth*sin(th_e);
 
+      if(u_v < -MAX_V){
+        u_v = -MAX_V;
+      }else if(u_v > MAX_V){
+        u_v = MAX_V;
+      }
+      if(u_om < -MAX_OM){
+        u_om = -MAX_OM;
+      }else if(u_om > MAX_OM){
+        u_om = MAX_OM;
+      }
+
       u_r = int((2*u_v+T*u_om)/(2*R*r));
       u_l = int((2*u_v-T*u_om)/(2*R*r));
+
+      ser.input(u_r, u_l);
 
       return 0;
     };
