@@ -106,7 +106,7 @@ class Controller{
     double th_e = 0.0;
   public:
     int run(double x_r, double y_r, double th_r, double dt){
-      auto status = cart.update(u_v, u_om, 0.05);
+      auto status = cart.update(u_v, u_om, dt);
       double x  = get<0>(status);
       double y  = get<1>(status);
       double th = get<2>(status);
@@ -150,7 +150,22 @@ int main(int argc, char **argv){
   double x_r = 2;
   double y_r = 2;
   double th_r = M_PI/4;
+  double dt = 0;
 
   Controller c;
-}
 
+  prev = ros::Time::now();
+  rate.sleep();
+
+  while(ros::ok()){
+    now = ros::Time::now();
+    dt = (now-prev).toSec();
+
+    c.run(x_r, y_r, th_r, dt);
+
+    ros::spinOnce();
+    rate.sleep();
+    prev = now;
+  }
+  return 0;
+}
