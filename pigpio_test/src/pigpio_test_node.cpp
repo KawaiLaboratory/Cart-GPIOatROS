@@ -108,7 +108,7 @@ int main(int argc, char **argv){
   fs << u_r << "," << u_l << ","<< lost  << "," << KP << "," << KI << "," << KD << std::endl;
 
   prev = ros::Time::now();
-  rate.sleep();
+  loop_rate.sleep();
   
   while(ros::ok()){
     now = ros::Time::now();

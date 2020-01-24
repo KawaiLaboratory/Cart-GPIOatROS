@@ -9,7 +9,6 @@ add_compile_options(-std=c++17 -lpigpiod_if2 -lrt)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions

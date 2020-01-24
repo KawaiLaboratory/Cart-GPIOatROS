@@ -8,6 +8,9 @@
 
 using namespace std;
 
+int pi;
+extern int pi;
+
 class Cartbot{
   private:
     double x  = 0;
@@ -29,10 +32,9 @@ class Cartbot{
 
 class Serial{
   private:
-    int pi;
-    extern int pi;
-    static int pin_pwm = {18, 19};
-    static int pin_dir = {20, 21};
+    const  int pin_pwm[2] = {18, 19};
+    const  int pin_dir[2] = {20, 21};
+    const  int HALF = 500000;
     int u_r_in = 0;
     int u_l_in = 0;
   public:
@@ -83,7 +85,6 @@ class Controller{
     const float v_r  = 0.01;
     const float om_r = 0.01;
     /* カート本体のパラメータ */
-    const int    HALF = 500000;
     const double R    = 0.0036*M_PI/180.0;
     const float  r    = 0.15/2;
     const float  T    = 0.66;
