@@ -38,9 +38,12 @@ class Serial{
     const int FREQ       = 10000;
     int u_r_in = 0;
     int u_l_in = 0;
-    ros::Time hs_prev = ros::Time::now();
-    ros::Time hs_now  = prev;
-    double    hs_dt   = 0.0;
+    ros::Time r_prev = ros::Time::now();
+    ros::Time l_prev = ros::Time::now();
+    ros::Time r_now  = r_prev;
+    ros::Time l_now  = l_prev;
+    double    r_dt   = 0.0;
+    double    l_dt   = 0.0;
   public:
     Serial(){
       pi = pigpio_start("localhost","8888");
@@ -50,7 +53,11 @@ class Serial{
       }
       for (int i = 0; i < 6; i++){
         set_mode(pi, pin_hs[i], PI_INPUT);
-        callback(pi, pin_hs[i], FALLING_EDGE, read());
+        if(i < 3){
+          callback(pi, pin_hs[i], FALLING_EDGE, read_r());
+        }else{
+          callback(pi, pin_hs[i], FALLING_EDGE, read_l());
+        }
       }
     };
     ~Serial(){
@@ -81,10 +88,15 @@ class Serial{
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
     };
-    void read(){
-      hs_now  = ros::Time::now();
-      hs_dt   = (hs_now - hs_prev).toSec();
-      hs_prev = hs_now;
+    void read_r(){
+      r_now  = ros::Time::now();
+      r_dt   = (r_now - r_prev).toSec();
+      r_prev = r_now;
+    };
+    void read_l(){
+      l_now  = ros::Time::now();
+      l_dt   = (l_now - l_prev).toSec();
+      l_prev = l_now;
     };
 };
 
