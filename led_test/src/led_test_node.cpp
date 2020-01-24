@@ -72,4 +72,9 @@ int main(int argc, char **argv){
     ros::spinOnce();  
     loop_rate.sleep();
   }
+  gpio_write(pi, SETUP_LED, PI_LOW);
+  set_mode(pi, SETUP_LED, PI_INPUT);
+  gpio_write(pi, DRIVING_LED, PI_LOW);
+  set_mode(pi, DRIVING_LED, PI_INPUT);
+  pigpio_stop(pi);
 }
