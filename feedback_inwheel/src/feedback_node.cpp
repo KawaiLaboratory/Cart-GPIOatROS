@@ -5,6 +5,7 @@
 #include "std_msgs/Bool.h"
 #include "fstream"
 #include "tuple"
+#include "thread"
 
 using namespace std;
 
@@ -47,6 +48,9 @@ class Serial{
   public:
     Serial(){
       pi = pigpio_start("localhost","8888");
+      if(pi < 0){
+        printf("GPIO ERROR");
+      }
       for (int i = 0; i < 2; i++){
         set_mode(pi, pin_pwm[i], PI_OUTPUT);
         set_mode(pi, pin_dir[i], PI_OUTPUT);
@@ -83,6 +87,29 @@ class Serial{
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
     };
+    void enc_thread_r(){
+      while(ros::ok()){
+        if(wait_for_edge(pi, 7, FALLING_EDGE, 0.05)){
+          r_now = ros::Time::now();
+          printf("rotation R");
+        }
+      }
+    };
+    void enc_thread_l(){
+      while(ros::ok()){
+        if(wait_for_edge(pi, 16, FALLING_EDGE, 0.05)){
+          l_now = ros::Time::now();
+          printf("rotation L");
+        }
+      }
+    };
+    void thread_start(){
+      thread thread_r( &Serial::enc_thread_r, this );
+      thread thread_l( &Serial::enc_thread_l, this );
+
+      thread_r.detach();
+      thread_l.detach();
+    };
 };
 
 class Controller{
@@ -117,6 +144,9 @@ class Controller{
     double y_e  = 0.0;
     double th_e = 0.0;
   public:
+    Controller(){
+      ser.thread_start();
+    };
     void run(double x_r, double y_r, double th_r, double dt){
       auto status = cart.update(u_v, u_om, dt);
       double x  = get<0>(status);
@@ -164,7 +194,7 @@ int main(int argc, char **argv){
   ros::Time now  = prev;
 
   double x_r  = 0;
-  double y_r  = 1;
+  double y_r  = 0;
   double th_r = M_PI/2;
   double dt   = 0;
 
