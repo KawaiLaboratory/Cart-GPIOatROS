@@ -95,17 +95,19 @@ class Serial{
       ros::Time r_prev = ros::Time::now();
       ros::Time r_now;
       double    r_dt = 0.0;
+      int       r_level_prev = gpio_read(pi, pin_hs[0]);
+      int       r_level_now  = r_level_prev;
 
       while(ros::ok()){
-        if(wait_for_edge(pi, 7, FALLING_EDGE, 60)){
+        r_level_now = gpio_read(pi, pin_hs[0]);
+        if(r_level_now != r_level_prev && r_level_now == PI_LOW){
           r_now  = ros::Time::now();
           r_dt   = (r_now-r_prev).toSec();
-          r_prev = r_now;
 
           v_r = (2*M_PI*r)/(15*r_dt);
-        }else{
-          r_prev = ros::Time::now();
-          v_r    = 0.0;
+
+          r_level_prev = r_level_now;
+          r_prev = r_now;
         }
         cout << v_r << endl;
       }
@@ -152,8 +154,8 @@ class Controller{
     const float Ky  = 2;
     const float Kth = 2;
     /* 目標速度及び回転速度 */
-    const float v_r  = 0.01;
-    const float om_r = 0.01;
+    const float v_d  = 0.01;
+    const float om_d = 0.01;
     /* カート本体のパラメータ */
     const float  r = 0.17/2; // タイヤ半径
     const float  T = 0.61;   // トレッド
@@ -169,9 +171,6 @@ class Controller{
     /* PWM入力 */
     int u_r  = 0;
     int u_l  = 0;
-    /* ｾﾝｻから得られた速度 */
-    double v_hs  = 0.0;
-    double om_hs = 0.0;
     /* 偏差 */
     double x_e  = 0.0;
     double y_e  = 0.0;
@@ -180,18 +179,18 @@ class Controller{
     Controller(){
       ser.thread_start(r);
     };
-    void run(double x_r, double y_r, double th_r, double dt){
+    void run(double x_d, double y_d, double th_d, double dt){
       auto status = cart.update(u_v, u_om, dt);
       double x  = get<0>(status);
       double y  = get<1>(status);
       double th = get<2>(status);
 
-      x_e  = (x_r-x)*cos(th) + (y_r-y)*sin(th);
-      y_e  = (y_r-y)*cos(th) - (x_r-x)*sin(th);
-      th_e = th_r-th;
+      x_e  = (x_d-x)*cos(th) + (y_d-y)*sin(th);
+      y_e  = (y_d-y)*cos(th) - (x_d-x)*sin(th);
+      th_e = th_d-th;
 
-      u_v  = v_r*cos(th_e) + Kx*x_e;
-      u_om = om_r + Ky*y_e*v_r + Kth*sin(th_e);
+      u_v  = v_d*cos(th_e) + Kx*x_e;
+      u_om = om_d + Ky*y_e*v_d + Kth*sin(th_e);
 
       if(u_v > 3){
         u_v = 3;
@@ -217,11 +216,11 @@ class Controller{
     };
     void get_u(){
       auto u = ser.get_enc();
-      double r_v = get<0>(u);
-      double l_v = get<1>(u);
+      double v_r = get<0>(u);
+      double v_l = get<1>(u);
 
-      u_v  = (r_v + l_v)/2;
-      u_om = (r_v - l_v)/T;
+      u_v  = (v_r + v_l)/2;
+      u_om = (v_r - v_l)/T;
     };
 };
 
@@ -234,9 +233,9 @@ int main(int argc, char **argv){
   ros::Time prev = ros::Time::now();;
   ros::Time now  = prev;
 
-  double x_r  = 0;
-  double y_r  = 2;
-  double th_r = M_PI/2;
+  double x_d  = 0;
+  double y_d  = 2;
+  double th_d = M_PI/2;
   double dt   = 0;
 
   Controller c;
@@ -247,7 +246,7 @@ int main(int argc, char **argv){
     now = ros::Time::now();
     dt = (now-prev).toSec();
 
-    c.run(x_r, y_r, th_r, dt);
+    c.run(x_d, y_d, th_d, dt);
 
     ros::spinOnce();
     rate.sleep();
