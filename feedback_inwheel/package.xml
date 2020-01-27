@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>feedback</name>
+  <name>feedback_inwheel</name>
   <version>0.0.0</version>
   <description>The feedback package</description>
 

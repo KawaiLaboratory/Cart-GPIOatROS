@@ -88,12 +88,12 @@ class Serial{
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
     };
-    void read_r(){
+    void read_r(int pi, int gpio, int level, uint32_t tick){
       r_now  = ros::Time::now();
       r_dt   = (r_now - r_prev).toSec();
       r_prev = r_now;
     };
-    void read_l(){
+    void read_l(int pi, int gpio, int level, uint32_t tick){
       l_now  = ros::Time::now();
       l_dt   = (l_now - l_prev).toSec();
       l_prev = l_now;
