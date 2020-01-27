@@ -53,11 +53,6 @@ class Serial{
       }
       for (int i = 0; i < 6; i++){
         set_mode(pi, pin_hs[i], PI_INPUT);
-        if(i < 3){
-          callback(pi, pin_hs[i], FALLING_EDGE, read_r());
-        }else{
-          callback(pi, pin_hs[i], FALLING_EDGE, read_l());
-        }
       }
     };
     ~Serial(){
@@ -87,16 +82,6 @@ class Serial{
 
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
-    };
-    void read_r(int pi, int gpio, int level, uint32_t tick){
-      r_now  = ros::Time::now();
-      r_dt   = (r_now - r_prev).toSec();
-      r_prev = r_now;
-    };
-    void read_l(int pi, int gpio, int level, uint32_t tick){
-      l_now  = ros::Time::now();
-      l_dt   = (l_now - l_prev).toSec();
-      l_prev = l_now;
     };
 };
 
@@ -145,6 +130,12 @@ class Controller{
       u_v  = v_r*cos(th_e) + Kx*x_e;
       u_om = om_r + Ky*y_e*v_r + Kth*sin(th_e);
 
+      if(u_v > 2){
+        u_v = 2;
+      }else if(u_v < -2){
+        u_v = -2;
+      }
+
       u_r = int((2*u_v+T*u_om)*(MAX_DUTY/11));
       u_l = int((2*u_v-T*u_om)*(MAX_DUTY/11));
 
@@ -160,7 +151,6 @@ class Controller{
       }
 
       ser.input(u_r, u_l);
-
     };
 };
 
@@ -173,9 +163,9 @@ int main(int argc, char **argv){
   ros::Time prev = ros::Time::now();;
   ros::Time now  = prev;
 
-  double x_r  = 2;
-  double y_r  = 2;
-  double th_r = M_PI/4;
+  double x_r  = 0;
+  double y_r  = 1;
+  double th_r = M_PI/2;
   double dt   = 0;
 
   Controller c;
