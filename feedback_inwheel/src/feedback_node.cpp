@@ -39,12 +39,8 @@ class Serial{
     const int FREQ       = 10000;
     int u_r_in = 0;
     int u_l_in = 0;
-    ros::Time r_prev = ros::Time::now();
-    ros::Time l_prev = ros::Time::now();
-    ros::Time r_now  = r_prev;
-    ros::Time l_now  = l_prev;
-    double    r_dt   = 0.0;
-    double    l_dt   = 0.0;
+    double v_r = 0.0;
+    double v_l = 0.0;
   public:
     Serial(){
       pi = pigpio_start("localhost","8888");
@@ -87,28 +83,53 @@ class Serial{
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
     };
-    void enc_thread_r(){
+    void enc_thread_r(const float r){
+      ros::Time r_prev = ros::Time::now();
+      ros::Time r_now;
+      double    r_dt = 0.0;
+
       while(ros::ok()){
-        if(wait_for_edge(pi, 7, FALLING_EDGE, 0.05)){
-          r_now = ros::Time::now();
-          printf("rotation R");
+        if(wait_for_edge(pi, 7, FALLING_EDGE, 60)){
+          r_now  = ros::Time::now();
+          r_dt   = (r_now-r_prev).toSec();
+          r_prev = r_now;
+
+          v_r = (2*M_PI*r)/(15*r_dt);
+        }else{
+          r_prev = ros::Time::now();
+          v_r    = 0.0;
         }
+        cout << v_r << endl;
       }
     };
-    void enc_thread_l(){
+    void enc_thread_l(const float r){
+      ros::Time l_prev = ros::Time::now();
+      ros::Time l_now;
+      double    l_dt = 0.0;
+
       while(ros::ok()){
-        if(wait_for_edge(pi, 16, FALLING_EDGE, 0.05)){
-          l_now = ros::Time::now();
-          printf("rotation L");
+        if(wait_for_edge(pi, 16, FALLING_EDGE, 60)){
+          l_now  = ros::Time::now();
+          l_dt   = (l_now-l_prev).toSec();
+          l_prev = l_now;
+
+          v_l = (2*M_PI*r)/(15*l_dt);
+        }else{
+          l_prev = ros::Time::now();
+          v_l    = 0.0;
         }
+        cout << v_l << endl;
       }
     };
-    void thread_start(){
-      thread thread_r( &Serial::enc_thread_r, this );
-      thread thread_l( &Serial::enc_thread_l, this );
+    void thread_start(const float r){
+      thread thread_r( &Serial::enc_thread_r, this, r );
+      thread thread_l( &Serial::enc_thread_l, this, r );
 
       thread_r.detach();
       thread_l.detach();
+    };
+    tuple<double, double> get_enc(){
+      return {v_r, v_l};
     };
 };
 
@@ -145,7 +166,7 @@ class Controller{
     double th_e = 0.0;
   public:
     Controller(){
-      ser.thread_start();
+      ser.thread_start(r);
     };
     void run(double x_r, double y_r, double th_r, double dt){
       auto status = cart.update(u_v, u_om, dt);
@@ -159,12 +180,6 @@ class Controller{
 
       u_v  = v_r*cos(th_e) + Kx*x_e;
       u_om = om_r + Ky*y_e*v_r + Kth*sin(th_e);
-
-      if(u_v > 2){
-        u_v = 2;
-      }else if(u_v < -2){
-        u_v = -2;
-      }
 
       u_r = int((2*u_v+T*u_om)*(MAX_DUTY/11));
       u_l = int((2*u_v-T*u_om)*(MAX_DUTY/11));
@@ -182,6 +197,14 @@ class Controller{
 
       ser.input(u_r, u_l);
     };
+    void get_u(){
+      auto u = ser.get_enc();
+      double v_r = get<0>(u);
+      double v_l = get<1>(u);
+
+      u_v  = (v_r + v_l)/2;
+      u_om = (v_r - v_l)/T;
+    };
 };
 
 int main(int argc, char **argv){
@@ -194,7 +217,7 @@ int main(int argc, char **argv){
   ros::Time now  = prev;
 
   double x_r  = 0;
-  double y_r  = 0;
+  double y_r  = 2;
   double th_r = M_PI/2;
   double dt   = 0;
 
@@ -210,6 +233,9 @@ int main(int argc, char **argv){
 
     ros::spinOnce();
     rate.sleep();
+
+    c.get_u();
+
     prev = now;
   }
   return 0;
