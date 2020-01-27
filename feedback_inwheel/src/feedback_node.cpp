@@ -35,12 +35,16 @@ class Serial{
   private:
     const int pin_pwm[2] = {12, 13};
     const int pin_dir[2] = {23, 24};
-    const int pin_hs[6]  = {7, 8, 16, 20, 21, 25};
+    const int pin_hs[2]  = {7 , 16}; // {7, 16, 20, 21, 25}
     const int FREQ       = 10000;
+    const int FORWARD    = 1;
+    const int REVERSE    = -1;
     int u_r_in = 0;
     int u_l_in = 0;
     double v_r = 0.0;
     double v_l = 0.0;
+    int r_dir  = 0;
+    int l_dir  = 0;
   public:
     Serial(){
       pi = pigpio_start("localhost","8888");
@@ -51,7 +55,7 @@ class Serial{
         set_mode(pi, pin_pwm[i], PI_OUTPUT);
         set_mode(pi, pin_dir[i], PI_OUTPUT);
       }
-      for (int i = 0; i < 6; i++){
+      for (int i = 0; i < 2; i++){
         set_mode(pi, pin_hs[i], PI_INPUT);
       }
     };
@@ -68,16 +72,20 @@ class Serial{
       if(u_r < 0){
         gpio_write(pi, pin_dir[0], PI_LOW);  // タイヤの回転方向指定
         u_r_in = abs(u_r);                  // 入力周波数指定
+        r_dir = REVERSE;
       }else{
         gpio_write(pi, pin_dir[0], PI_HIGH); // タイヤの回転方向指定
         u_r_in = u_r;                       // 入力周波数指定
+        r_dir = FORWARD;
       }
       if(u_l < 0){
         gpio_write(pi, pin_dir[1], PI_HIGH); // タイヤの回転方向指定
         u_l_in = abs(u_l);                  // 入力周波数指定
+        l_dir = REVERSE;
       }else{
         gpio_write(pi, pin_dir[1], PI_LOW);  // タイヤの回転方向指定
         u_l_in = u_l;                       // 入力周波数指定
+        l_dir = FORWARD;
       }
 
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
@@ -106,17 +114,19 @@ class Serial{
       ros::Time l_prev = ros::Time::now();
       ros::Time l_now;
       double    l_dt = 0.0;
+      int       l_level_prev = gpio_read(pi, pin_hs[1]);
+      int       l_level_now  = l_level_prev;
 
       while(ros::ok()){
-        if(wait_for_edge(pi, 16, FALLING_EDGE, 60)){
-          l_now  = ros::Time::now();
-          l_dt   = (l_now-l_prev).toSec();
-          l_prev = l_now;
+        l_level_now = gpio_read(pi, pin_hs[1]);
+        if(l_level_now != l_level_prev && l_level_now == PI_LOW){
+          l_now = ros::Time::now();
+          l_dt  = (l_now-l_prev).toSec();
 
           v_l = (2*M_PI*r)/(15*l_dt);
-        }else{
-          l_prev = ros::Time::now();
-          v_l    = 0.0;
+
+          l_level_prev = l_level_now;
+          l_prev = l_now;
         }
         cout << v_l << endl;
       }
@@ -129,7 +139,9 @@ class Serial{
       thread_l.detach();
     };
     tuple<double, double> get_enc(){
-      return {v_r, v_l};
+      double v_r_dir = r_dir * v_r;
+      double v_l_dir = l_dir * v_l;
+      return {v_r_dir, v_l_dir};
     };
 };
 
@@ -181,6 +193,12 @@ class Controller{
       u_v  = v_r*cos(th_e) + Kx*x_e;
       u_om = om_r + Ky*y_e*v_r + Kth*sin(th_e);
 
+      if(u_v > 3){
+        u_v = 3;
+      }else if(u_v < -3){
+        u_v = -3;
+      }
+
       u_r = int((2*u_v+T*u_om)*(MAX_DUTY/11));
       u_l = int((2*u_v-T*u_om)*(MAX_DUTY/11));
 
@@ -199,11 +217,11 @@ class Controller{
     };
     void get_u(){
       auto u = ser.get_enc();
-      double v_r = get<0>(u);
-      double v_l = get<1>(u);
+      double r_v = get<0>(u);
+      double l_v = get<1>(u);
 
-      u_v  = (v_r + v_l)/2;
-      u_om = (v_r - v_l)/T;
+      u_v  = (r_v + l_v)/2;
+      u_om = (r_v - l_v)/T;
     };
 };
 
