@@ -109,7 +109,6 @@ class Serial{
           r_level_prev = r_level_now;
           r_prev = r_now;
         }
-        cout << v_r << endl;
       }
     };
     void enc_thread_l(const float r){
@@ -130,7 +129,6 @@ class Serial{
           l_level_prev = l_level_now;
           l_prev = l_now;
         }
-        cout << v_l << endl;
       }
     };
     void thread_start(const float r){
@@ -192,10 +190,10 @@ class Controller{
       u_v  = v_d*cos(th_e) + Kx*x_e;
       u_om = om_d + Ky*y_e*v_d + Kth*sin(th_e);
 
-      if(u_v > 3){
-        u_v = 3;
-      }else if(u_v < -3){
-        u_v = -3;
+      if(u_v > 1.5){
+        u_v = 1.5;
+      }else if(u_v < -1.5){
+        u_v = -1.5;
       }
 
       u_r = int((2*u_v+T*u_om)*(MAX_DUTY/11));
@@ -219,6 +217,8 @@ class Controller{
       double v_r = get<0>(u);
       double v_l = get<1>(u);
 
+      cout << "R:" << v_r << endl;
+      cout << "L:" << v_l << endl;
       u_v  = (v_r + v_l)/2;
       u_om = (v_r - v_l)/T;
     };
