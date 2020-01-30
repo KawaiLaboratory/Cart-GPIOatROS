@@ -201,8 +201,14 @@ class Controller{
       if(debug_flg){
         fs.open("~/catkin_ws/src/feedback_inwheel/csv/"+to_string(std::time(nullptr))+".csv");
         fs << "t,x,y,th,v_enc,om_enc,u_v,u_om,u_r,u_l,v_r,v_l,x_e,y_e,th_e,Kx,Ky,Kth,v_d,om_d" << endl;
+        output_statuses(true);
       }
     };
+    ~Controller(){
+      if(debug_flg){
+        fs.close();
+      }
+    }
     void run(double x_d, double y_d, double th_d, double dt){
       auto status = cart.update(u_v, u_om, dt);
       x = get<0>(status);
@@ -251,6 +257,21 @@ class Controller{
       om_enc = (v_r - v_l)/T;
       u_v  = v_enc;
       u_om = om_enc; 
+    };
+    void output_statuses(bool setup_flg = false){
+      current = ros::Time::now();
+      fs << (current-start).toSec() << ",";
+      fs << x << "," << y << "," << th << ",";
+      fs << v_enc << "," << om_enc<< ",";
+      fs << u_v << "," << u_om << ",";
+      fs << u_r << "," << u_l << ",";
+      fs << v_r << "," << v_l << ",";
+      fs << x_e << "," << y_e << "," << th_e;
+      if(setup_flg){
+        fs << "," << Kx << "," << Ky << "," << Kth << ",";
+        fs << v_d << "," << om_d <<;
+      }
+      fs << endl;
     };
 };
 
