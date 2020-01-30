@@ -162,30 +162,51 @@ class Controller{
     const float  r = 0.17/2; // タイヤ半径
     const float  T = 0.61;   // トレッド
     /* saturation */
-    const int MAX_DUTY = 1000000;
+    const int   MAX_DUTY = 1000000;
+    const float MAX_V    = 1.5;
+    const float MAX_OM   = M_PI;
+    /* debugmode */
+    const bool debug_flg = true;
     /* カート */
     Cartbot cart;
-    /* シリアル */
+    /* GPIO */
     Serial ser;
     /* 速度入力 */
     double u_v  = 0.0;
     double u_om = 0.0;
+    /* エンコーダによる速度 */
+    double v_enc  = 0.0;
+    double om_enc = 0.0;
     /* PWM入力 */
     int u_r  = 0;
     int u_l  = 0;
+    /* モータ速度 */
+    double v_r = 0.0;
+    double v_l = 0.0;
+    /* 位置姿勢 */
+    double x  = 0.0;
+    double y  = 0.0;
+    double th = 0.0;
     /* 偏差 */
     double x_e  = 0.0;
     double y_e  = 0.0;
     double th_e = 0.0;
+    /* csv用 */
+    ofstream fs;
+    ros::Time start   = ros::Time::now();
+    ros::Time current = start;
   public:
     Controller(){
       ser.thread_start(r);
+      if(debug_flg){
+        fs.open("~/catkin_ws/src/feedback_inwheel/csv/"+to_string(std::time(nullptr))+".csv");
+        fs << "t,x,y,th,v_enc,om_enc,u_v,u_om,u_r,u_l,v_r,v_l,x_e,y_e,th_e,Kx,Ky,Kth,v_d,om_d" << endl;
+      }
     };
     void run(double x_d, double y_d, double th_d, double dt){
       auto status = cart.update(u_v, u_om, dt);
-      double x  = get<0>(status);
-      double y  = get<1>(status);
-      double th = get<2>(status);
+      x = get<0>(status);
+      y  = get<1>(status);
 
       x_e  = (x_d-x)*cos(th) + (y_d-y)*sin(th);
       y_e  = (y_d-y)*cos(th) - (x_d-x)*sin(th);
@@ -194,10 +215,15 @@ class Controller{
       u_v  = v_d*cos(th_e) + Kx*x_e;
       u_om = om_d + Ky*y_e*v_d + Kth*sin(th_e);
 
-      if(u_v > 1.5){
-        u_v = 1.5;
-      }else if(u_v < -1.5){
-        u_v = -1.5;
+      if(u_v > MAX_V){
+        u_v = MAX_V;
+      }else if(u_v < -MAX_V){
+        u_v = -MAX_V;
+      }
+      if(u_om > MAX_OM){
+        u_om = MAX_OM;
+      }else if(u_om < -MAX_OM){
+        u_om = -MAX_OM;
       }
 
       u_r = int((2*u_v+T*u_om)*(MAX_DUTY/11));
@@ -218,13 +244,13 @@ class Controller{
     };
     void get_u(){
       auto u = ser.get_enc();
-      double v_r = get<0>(u);
-      double v_l = get<1>(u);
+      v_r = get<0>(u);
+      v_l = get<1>(u);
 
-      cout << "R:" << v_r << endl;
-      cout << "L:" << v_l << endl;
-      u_v  = (v_r + v_l)/2;
-      u_om = (v_r - v_l)/T;
+      v_enc  = (v_r + v_l)/2;
+      om_enc = (v_r - v_l)/T;
+      u_v  = v_enc;
+      u_om = om_enc; 
     };
 };
 
