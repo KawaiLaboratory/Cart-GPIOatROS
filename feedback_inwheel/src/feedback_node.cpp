@@ -94,6 +94,7 @@ class Serial{
     void enc_thread_r(const float r){
       ros::Time r_prev = ros::Time::now();
       ros::Time r_now;
+      ros::Rate rate(100);
       double    r_dt = 0.0;
       int       r_level_prev = gpio_read(pi, pin_hs[0]);
       int       r_level_now  = r_level_prev;
@@ -109,11 +110,13 @@ class Serial{
           r_level_prev = r_level_now;
           r_prev = r_now;
         }
+        rate.sleep();
       }
     };
     void enc_thread_l(const float r){
       ros::Time l_prev = ros::Time::now();
       ros::Time l_now;
+      ros::Rate rate(100);
       double    l_dt = 0.0;
       int       l_level_prev = gpio_read(pi, pin_hs[1]);
       int       l_level_now  = l_level_prev;
@@ -129,6 +132,7 @@ class Serial{
           l_level_prev = l_level_now;
           l_prev = l_now;
         }
+        rate.sleep();
       }
     };
     void thread_start(const float r){
