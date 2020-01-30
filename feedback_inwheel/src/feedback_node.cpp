@@ -247,6 +247,9 @@ class Controller{
       }
 
       ser.input(u_r, u_l);
+      if(debug_flg){
+        output_statuses();
+      }
     };
     void get_u(){
       auto u = ser.get_enc();
@@ -256,7 +259,7 @@ class Controller{
       v_enc  = (v_r + v_l)/2;
       om_enc = (v_r - v_l)/T;
       u_v  = v_enc;
-      u_om = om_enc; 
+      u_om = om_enc;
     };
     void output_statuses(bool setup_flg = false){
       current = ros::Time::now();
@@ -269,7 +272,7 @@ class Controller{
       fs << x_e << "," << y_e << "," << th_e;
       if(setup_flg){
         fs << "," << Kx << "," << Ky << "," << Kth << ",";
-        fs << v_d << "," << om_d <<;
+        fs << v_d << "," << om_d;
       }
       fs << endl;
     };
