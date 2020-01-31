@@ -41,7 +41,7 @@ class Serial{
   private:
     const int pin_pwm[2] = {12, 13};
     const int pin_dir[2] = {23, 24};
-    const int pin_hs[2]  = {7 , 16}; // {7, 16, 20, 21, 25}
+    const int pin_hs[2]  = {7, 8, 25, 16, 20, 21};
     const int FREQ       = 10000;
     int u_r_in = 0;
     int u_l_in = 0;
@@ -52,16 +52,22 @@ class Serial{
       if(pi < 0){
         printf("GPIO ERROR");
       }
+      t_r = ros::Time::now();
+      t_l = ros::Time::now();
+
       for (int i = 0; i < 2; i++){
         set_mode(pi, pin_pwm[i], PI_OUTPUT);
         set_mode(pi, pin_dir[i], PI_OUTPUT);
         set_mode(pi, pin_hs[i],  PI_INPUT);
-        set_pull_up_down(pi, pin_hs[i], PI_PUD_UP);
       }
-      t_r = ros::Time::now();
-      t_l = ros::Time::now();
-      callback(pi, pin_hs[0], FALLING_EDGE, &Serial::enc_r);
-      callback(pi, pin_hs[1], FALLING_EDGE, &Serial::enc_l);
+      for (int i = 0; i < 6; i++){
+        set_pull_up_down(pi, pin_hs[i], PI_PUD_UP);
+        if(i < 3){
+          callback(pi, pin_hs[0], FALLING_EDGE, &Serial::enc_r);
+        }else{
+          callback(pi, pin_hs[1], FALLING_EDGE, &Serial::enc_l);
+        }
+      }
     };
     ~Serial(){
       for (int i = 0; i < 2; i++){
@@ -99,7 +105,7 @@ class Serial{
         r_count++;
         r_read_flg = false;
       }
-      //cout << "R" << endl;
+      cout << gpio << endl;
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_l = ros::Time::now();
@@ -109,7 +115,7 @@ class Serial{
         l_count++;
         l_read_flg = false;
       }
-      //cout << "L" << endl;
+      cout << gpio << endl;
     };
 };
 
@@ -220,8 +226,8 @@ class Controller{
       ros::Time t = ros::Time::now();
       int dr_count = r_count/(t-t_r).toSec();
       int dl_count = l_count/(t-t_l).toSec();
-      v_r = 2*M_PI*r/15*dr_count;
-      v_l = 2*M_PI*r/15*dl_count;
+      v_r = 2*M_PI*r/45*dr_count;
+      v_l = 2*M_PI*r/45*dl_count;
       v_enc  = (v_r+v_l)/2;
       om_enc = (v_r-v_l)/T;
       u_v  = v_enc;
