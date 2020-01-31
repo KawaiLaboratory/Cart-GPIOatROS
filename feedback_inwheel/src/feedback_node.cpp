@@ -15,6 +15,8 @@ long int r_count = 0;
 long int l_count = 0;
 ros::Time t_r;
 ros::Time t_l;
+bool r_read_flg = false;
+bool l_read_flg = false;
 
 class Cartbot{
   private:
@@ -91,12 +93,22 @@ class Serial{
     };
     static void enc_r(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_r = ros::Time::now();
-      r_count++;
+      if(r_read_flg){
+        r_count = 1;
+      }else{
+        r_count++;
+        r_read_flg = false;
+      }
       //cout << "R" << endl;
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_l = ros::Time::now();
-      l_count++;
+      if(r_read_flg){
+        l_count = 1;
+      }else{
+        l_count++;
+        l_read_flg = false;
+      }
       //cout << "L" << endl;
     };
 };
@@ -214,13 +226,12 @@ class Controller{
       int dl_count = l_count/(t-t_l).toSec();
       v_r = 2*M_PI*r/15*dr_count;
       v_l = 2*M_PI*r/15*dl_count;
-      //cout << v_r << "," << v_l << endl;
       v_enc  = (v_r+v_l)/2;
       om_enc = (v_r-v_l)/T;
       u_v  = v_enc;
       u_om = om_enc;
-      r_count = 0;
-      l_count = 0;
+      r_read_flg = true;
+      l_read_flg = true;
     }
     void output_statuses(bool first = false){
       current = ros::Time::now();
