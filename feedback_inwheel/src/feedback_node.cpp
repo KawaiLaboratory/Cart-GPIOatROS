@@ -41,7 +41,7 @@ class Serial{
   private:
     const int pin_pwm[2] = {12, 13};
     const int pin_dir[2] = {23, 24};
-    const int pin_hs[2]  = {7, 8, 25, 16, 20, 21};
+    const int pin_hs[6]  = {7, 8, 25, 16, 20, 21};
     const int FREQ       = 10000;
     int u_r_in = 0;
     int u_l_in = 0;
@@ -63,9 +63,9 @@ class Serial{
       for (int i = 0; i < 6; i++){
         set_pull_up_down(pi, pin_hs[i], PI_PUD_UP);
         if(i < 3){
-          callback(pi, pin_hs[0], FALLING_EDGE, &Serial::enc_r);
+          callback(pi, pin_hs[i], FALLING_EDGE, &Serial::enc_r);
         }else{
-          callback(pi, pin_hs[1], FALLING_EDGE, &Serial::enc_l);
+          callback(pi, pin_hs[i], FALLING_EDGE, &Serial::enc_l);
         }
       }
     };
