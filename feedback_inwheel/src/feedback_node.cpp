@@ -90,14 +90,14 @@ class Serial{
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
     };
     static void enc_r(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
-      t_r      = ros::Time::now();
+      t_r = ros::Time::now();
       r_count++;
-      cout << "R" << endl;
+      //cout << "R" << endl;
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
-      t_l      = ros::Time::now();
+      t_l = ros::Time::now();
       l_count++;
-      cout << "L" << endl;
+      //cout << "L" << endl;
     };
 };
 
@@ -116,7 +116,7 @@ class Controller{
     /* saturation */
     const int   MAX_DUTY = 1000000;
     const int   MIN_DUTY = 1000;
-    const float MAX_V    = 1.5;
+    const float MAX_V    = 1;
     const float MAX_OM   = M_PI;
     /* debugmode */
     const bool debug_flg = true;
@@ -163,8 +163,9 @@ class Controller{
     }
     void run(double x_d, double y_d, double th_d, double dt){
       auto status = cart.update(u_v, u_om, dt);
-      x = get<0>(status);
+      x  = get<0>(status);
       y  = get<1>(status);
+      th = get<2>(status);
 
       x_e  = (x_d-x)*cos(th) + (y_d-y)*sin(th);
       y_e  = (y_d-y)*cos(th) - (x_d-x)*sin(th);
@@ -202,7 +203,7 @@ class Controller{
         u_l = 0;
       }
 
-      // ser.input(u_r, u_l);
+      ser.input(u_r, u_l);
       if(debug_flg){
         output_statuses();
       }
@@ -213,9 +214,13 @@ class Controller{
       int dl_count = l_count/(t-t_l).toSec();
       v_r = 2*M_PI*r/15*dr_count;
       v_l = 2*M_PI*r/15*dl_count;
-      cout << v_r << "," << v_l << endl;
+      //cout << v_r << "," << v_l << endl;
+      v_enc  = (v_r+v_l)/2;
+      om_enc = (v_r-v_l)/T;
+      u_v  = v_enc;
+      u_om = om_enc;
       r_count = 0;
-      l_count = 0; 
+      l_count = 0;
     }
     void output_statuses(bool first = false){
       current = ros::Time::now();
