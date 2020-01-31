@@ -12,9 +12,7 @@ using namespace std;
 int pi;
 extern int pi;
 long int r_count = 0;
-long int r_count_prev = 0;
 long int l_count = 0;
-long int l_count_prev =0;
 ros::Time t_r;
 ros::Time t_l;
 
@@ -93,13 +91,11 @@ class Serial{
     };
     static void enc_r(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_r      = ros::Time::now();
-      r_count_prev = r_count;
       r_count++;
       cout << "R" << endl;
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_l      = ros::Time::now();
-      l_count_prev = l_count;
       l_count++;
       cout << "L" << endl;
     };
@@ -213,13 +209,15 @@ class Controller{
     };
     void get_u(){
       ros::Time t = ros::Time::now();
-      int dr_count = (r_count-r_count_prev)/(t-t_r).toSec();
-      int dl_count = (l_count-l_count_prev)/(t-t_l).toSec();
+      int dr_count = r_count/(t-t_r).toSec();
+      int dl_count = l_count/(t-t_l).toSec();
       v_r = 2*M_PI*r/15*dr_count;
       v_l = 2*M_PI*r/15*dl_count;
       cout << v_r << "," << v_l << endl;
+      r_count = 0;
+      l_count = 0; 
     }
-    void output_statuses(bool setup_flg = false){
+    void output_statuses(bool first = false){
       current = ros::Time::now();
       fs << (current-start).toSec() << ",";
       fs << x << "," << y << "," << th << ",";
@@ -228,7 +226,7 @@ class Controller{
       fs << u_r << "," << u_l << ",";
       fs << v_r << "," << v_l << ",";
       fs << x_e << "," << y_e << "," << th_e;
-      if(setup_flg){
+      if(first){
         fs << "," << Kx << "," << Ky << "," << Kth << ",";
         fs << v_d << "," << om_d;
       }
