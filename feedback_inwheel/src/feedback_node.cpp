@@ -204,15 +204,11 @@ class Controller{
         u_r = -MAX_DUTY;
       }else if(u_r > MAX_DUTY){
         u_r = MAX_DUTY;
-      }else if(abs(u_r) < MIN_DUTY){
-        u_r = 0;
       }
       if(u_l < -MAX_DUTY){
         u_l = -MAX_DUTY;
       }else if(u_l > MAX_DUTY){
         u_l = MAX_DUTY;
-      }else if(abs(u_l) < MIN_DUTY){
-        u_l = 0;
       }
 
       ser.input(u_r, u_l);
