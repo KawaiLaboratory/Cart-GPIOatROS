@@ -11,12 +11,12 @@ using namespace std;
 
 int pi;
 extern int pi;
-double dt_r = 0.0;
-double dt_l = 0.0;
+long int r_count = 0;
+long int r_count_prev = 0;
+long int l_count = 0;
+long int l_count_prev =0;
 ros::Time t_r;
-ros::Time t_r_prev;
 ros::Time t_l;
-ros::Time t_l_prev;
 
 class Cartbot{
   private:
@@ -56,9 +56,10 @@ class Serial{
         set_mode(pi, pin_pwm[i], PI_OUTPUT);
         set_mode(pi, pin_dir[i], PI_OUTPUT);
         set_mode(pi, pin_hs[i],  PI_INPUT);
+        set_pull_up_down(pi, pin_hs[i], PI_PUD_UP);
       }
-      t_r_prev = ros::Time::now();
-      t_l_prev = ros::Time::now();
+      t_r = ros::Time::now();
+      t_l = ros::Time::now();
       callback(pi, pin_hs[0], FALLING_EDGE, &Serial::enc_r);
       callback(pi, pin_hs[1], FALLING_EDGE, &Serial::enc_l);
     };
@@ -80,10 +81,10 @@ class Serial{
         u_r_in = u_r;                       // 入力周波数指定
       }
       if(u_l < 0){
-        gpio_write(pi, pin_dir[1], PI_LOW); // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_HIGH); // タイヤの回転方向指定
         u_l_in = abs(u_l);                  // 入力周波数指定
       }else{
-        gpio_write(pi, pin_dir[1], PI_HIGH);  // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_LOW);  // タイヤの回転方向指定
         u_l_in = u_l;                       // 入力周波数指定
       }
 
@@ -92,14 +93,14 @@ class Serial{
     };
     static void enc_r(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_r      = ros::Time::now();
-      dt_r     = (t_r-t_r_prev).toSec();
-      t_r_prev = t_r;
+      r_count_prev = r_count;
+      r_count++;
       cout << "R" << endl;
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_l      = ros::Time::now();
-      dt_l     = (t_l-t_l_prev).toSec();
-      t_l_prev = t_l;
+      l_count_prev = l_count;
+      l_count++;
       cout << "L" << endl;
     };
 };
@@ -154,7 +155,7 @@ class Controller{
   public:
     Controller(){
       if(debug_flg){
-        fs.open(to_string(std::time(nullptr))+".csv");
+        fs.open("/home/pi/catkin_ws/src/feedback_inwheel/csv/"+ to_string(std::time(nullptr))+".csv");
         fs << "t,x,y,th,v_enc,om_enc,u_v,u_om,u_r,u_l,v_r,v_l,x_e,y_e,th_e,Kx,Ky,Kth,v_d,om_d" << endl;
         output_statuses(true);
       }
@@ -205,14 +206,17 @@ class Controller{
         u_l = 0;
       }
 
-//      ser.input(u_r, u_l);
+      // ser.input(u_r, u_l);
       if(debug_flg){
         output_statuses();
       }
     };
     void get_u(){
-      v_r = (2*M_PI*r)/(dt_r*15);
-      v_l = (2*M_PI*r)/(dt_l*15);
+      ros::Time t = ros::Time::now();
+      int dr_count = (r_count-r_count_prev)/(t-t_r).toSec();
+      int dl_count = (l_count-l_count_prev)/(t-t_l).toSec();
+      v_r = 2*M_PI*r/15*dr_count;
+      v_l = 2*M_PI*r/15*dl_count;
       cout << v_r << "," << v_l << endl;
     }
     void output_statuses(bool setup_flg = false){
