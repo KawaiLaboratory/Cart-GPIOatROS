@@ -104,7 +104,7 @@ class Serial{
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
     };
     tuple<int, int> dir(){
-      return {r_dir, l_dir}
+      return {r_dir, l_dir};
     };
     static void enc_r(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_r = ros::Time::now();
@@ -114,7 +114,6 @@ class Serial{
         r_count++;
         r_read_flg = false;
       }
-      cout << gpio << "," << r_count << endl;
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_l = ros::Time::now();
@@ -124,7 +123,6 @@ class Serial{
         l_count++;
         l_read_flg = false;
       }
-      cout << gpio << "," << l_count << endl;
     };
 };
 
@@ -247,6 +245,7 @@ class Controller{
       u_om = om_enc;
       r_read_flg = true;
       l_read_flg = true;
+      cout << v_enc << "," << om_enc << endl;
     }
     void output_statuses(bool first = false){
       current = ros::Time::now();
@@ -275,7 +274,7 @@ int main(int argc, char **argv){
   ros::Time now  = prev;
 
   double x_d  = 0;
-  double y_d  = 2;
+  double y_d  = 1;
   double th_d = M_PI/2;
   double dt   = 0;
 
