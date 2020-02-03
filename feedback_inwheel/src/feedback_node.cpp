@@ -80,20 +80,20 @@ class Serial{
       if(u_r < 0){
         gpio_write(pi, pin_dir[0], PI_LOW);  // タイヤの回転方向指定
         u_r_in = abs(u_r);                  // 入力周波数指定
-        r_dir  = 1;
+        r_dir  = -1;
       }else{
         gpio_write(pi, pin_dir[0], PI_HIGH); // タイヤの回転方向指定
         u_r_in = u_r;                       // 入力周波数指定
-        r_dir  = -1;
+        r_dir  = 1;
       }
       if(u_l < 0){
         gpio_write(pi, pin_dir[1], PI_HIGH); // タイヤの回転方向指定
         u_l_in = abs(u_l);                  // 入力周波数指定
-        l_dir  = 1;
+        l_dir  = -1;
       }else{
         gpio_write(pi, pin_dir[1], PI_LOW);  // タイヤの回転方向指定
         u_l_in = u_l;                       // 入力周波数指定
-        l_dir  = -1;
+        l_dir  = 1;
       }
 
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
@@ -243,6 +243,7 @@ class Controller{
       l_read_flg = true;
 
       t_enc_prev = t_enc;
+      cout << v_r << "," << v_l << endl;
     }
     void output_statuses(bool first = false){
       current = ros::Time::now();
@@ -271,7 +272,7 @@ int main(int argc, char **argv){
   ros::Time now  = prev;
 
   double x_d  = 0;
-  double y_d  = 1;
+  double y_d  = 3;
   double th_d = M_PI/2;
   double dt   = 0;
 
