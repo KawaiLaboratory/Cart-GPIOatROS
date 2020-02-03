@@ -41,7 +41,7 @@ class Serial{
   private:
     const int pin_pwm[2] = {12, 13};
     const int pin_dir[2] = {23, 24};
-    const int pin_hs[6]  = {7, 8, 25, 16, 20, 21};
+    const int pin_hs[4]  = {7, 25, 16, 21}; //8, 20は挙動が不安定なため除外
     const int FREQ       = 10000;
     int u_r_in = 0;
     int u_l_in = 0;
@@ -60,9 +60,9 @@ class Serial{
         set_mode(pi, pin_dir[i], PI_OUTPUT);
         set_mode(pi, pin_hs[i],  PI_INPUT);
       }
-      for (int i = 0; i < 6; i++){
+      for (int i = 0; i < 4; i++){
         set_pull_up_down(pi, pin_hs[i], PI_PUD_UP);
-        if(i < 3){
+        if(i < 2){
           callback(pi, pin_hs[i], RISING_EDGE, &Serial::enc_r);
         }else{
           callback(pi, pin_hs[i], RISING_EDGE, &Serial::enc_l);
@@ -217,7 +217,7 @@ class Controller{
         u_l = MAX_DUTY;
       }
 
-      // ser.input(u_r, u_l);
+      ser.input(u_r, u_l);
       if(debug_flg){
         output_statuses();
       }
@@ -226,8 +226,8 @@ class Controller{
       ros::Time t = ros::Time::now();
       int dr_count = r_count/(t-t_r).toSec();
       int dl_count = l_count/(t-t_l).toSec();
-      v_r = 2*M_PI*r/45*dr_count;
-      v_l = 2*M_PI*r/45*dl_count;
+      v_r = 2*M_PI*r/30*dr_count;
+      v_l = 2*M_PI*r/30*dl_count;
       v_enc  = (v_r+v_l)/2;
       om_enc = (v_r-v_l)/T;
       u_v  = v_enc;
