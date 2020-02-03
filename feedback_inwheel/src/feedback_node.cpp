@@ -63,9 +63,9 @@ class Serial{
       for (int i = 0; i < 6; i++){
         set_pull_up_down(pi, pin_hs[i], PI_PUD_UP);
         if(i < 3){
-          callback(pi, pin_hs[i], FALLING_EDGE, &Serial::enc_r);
+          callback(pi, pin_hs[i], RISING_EDGE, &Serial::enc_r);
         }else{
-          callback(pi, pin_hs[i], FALLING_EDGE, &Serial::enc_l);
+          callback(pi, pin_hs[i], RISING_EDGE, &Serial::enc_l);
         }
       }
     };
@@ -105,7 +105,7 @@ class Serial{
         r_count++;
         r_read_flg = false;
       }
-      cout << gpio << endl;
+      cout << gpio << "," << r_count << endl;
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_l = ros::Time::now();
@@ -115,7 +115,7 @@ class Serial{
         l_count++;
         l_read_flg = false;
       }
-      cout << gpio << endl;
+      cout << gpio << "," << l_count << endl;
     };
 };
 
@@ -217,7 +217,7 @@ class Controller{
         u_l = MAX_DUTY;
       }
 
-      ser.input(u_r, u_l);
+      // ser.input(u_r, u_l);
       if(debug_flg){
         output_statuses();
       }
