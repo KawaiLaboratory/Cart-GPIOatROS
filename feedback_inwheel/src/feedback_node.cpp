@@ -45,6 +45,8 @@ class Serial{
     const int FREQ       = 10000;
     int u_r_in = 0;
     int u_l_in = 0;
+    int r_dir = 1;
+    int l_dir = 1;
   public:
     Serial(){
       pi = pigpio_start("localhost","8888");
@@ -82,20 +84,27 @@ class Serial{
       if(u_r < 0){
         gpio_write(pi, pin_dir[0], PI_LOW);  // タイヤの回転方向指定
         u_r_in = abs(u_r);                  // 入力周波数指定
+        r_dir  = 1;
       }else{
         gpio_write(pi, pin_dir[0], PI_HIGH); // タイヤの回転方向指定
         u_r_in = u_r;                       // 入力周波数指定
+        r_dir  = -1;
       }
       if(u_l < 0){
         gpio_write(pi, pin_dir[1], PI_HIGH); // タイヤの回転方向指定
         u_l_in = abs(u_l);                  // 入力周波数指定
+        l_dir  = 1;
       }else{
         gpio_write(pi, pin_dir[1], PI_LOW);  // タイヤの回転方向指定
         u_l_in = u_l;                       // 入力周波数指定
+        l_dir  = -1;
       }
 
       hardware_PWM(pi, pin_pwm[0], FREQ, u_r_in);
       hardware_PWM(pi, pin_pwm[1], FREQ, u_l_in);
+    };
+    tuple<int, int> dir(){
+      return {r_dir, l_dir}
     };
     static void enc_r(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
       t_r = ros::Time::now();
@@ -226,8 +235,12 @@ class Controller{
       ros::Time t = ros::Time::now();
       int dr_count = r_count/(t-t_r).toSec();
       int dl_count = l_count/(t-t_l).toSec();
-      v_r = 2*M_PI*r/30*dr_count;
-      v_l = 2*M_PI*r/30*dl_count;
+      auto dir = ser.dir();
+      int  r_dir = get<0>(dir);
+      int  l_dir = get<1>(dir);
+
+      v_r = r_dir*2*M_PI*r/30*dr_count;
+      v_l = l_dir*2*M_PI*r/30*dl_count;
       v_enc  = (v_r+v_l)/2;
       om_enc = (v_r-v_l)/T;
       u_v  = v_enc;
