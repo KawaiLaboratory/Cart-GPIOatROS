@@ -19,14 +19,12 @@ class Cartbot{
     double v  = 0;
     double om = 0;
   public:
-    tuple<double, double, double, double, double> update(double u_v, double u_om, double dt){
+    void update(double u_v, double u_om, double dt){
       x  = x + u_v * dt * cos(th+u_om*dt/2);
       y  = y + u_v * dt * sin(th+u_om*dt/2);
       th = th + u_om*dt;
       v  = u_v;
       om = u_om;
-
-      return {x, y, th, v, om};
     };
 };
 
@@ -78,12 +76,8 @@ class Serial{
 class Controller{
   private:
     /* ゲイン*/
-    const float Kx  = 2;
-    const float Ky  = 2;
-    const float Kth = 2;
-    /* 目標速度及び回転速度 */
-    const float v_r  = 0.01;
-    const float om_r = 0.01;
+    const float K1  = 2;
+    const float K2  = 2;
     /* カート本体のパラメータ */
     const double R    = 0.0036*M_PI/180.0;
     const float  r    = 0.15/2;
@@ -101,23 +95,12 @@ class Controller{
     /* PWM入力 */
     int u_r  = 0;
     int u_l  = 0;
-    /* 偏差 */
-    double x_e  = 0.0;
-    double y_e  = 0.0;
-    double th_e = 0.0;
   public:
-    int run(double x_r, double y_r, double th_r, double dt){
-      auto status = cart.update(u_v, u_om, dt);
-      double x  = get<0>(status);
-      double y  = get<1>(status);
-      double th = get<2>(status);
+    int run(double x_e, double y_e, double phi, double dt){
+      cart.update(u_v, u_om, dt);
 
-      x_e  = (x_r-x)*cos(th) + (y_r-y)*sin(th);
-      y_e  = (y_r-y)*cos(th) - (x_r-x)*sin(th);
-      th_e = th_r-th;
-
-      u_v  = v_r*cos(th_e) + Kx*x_e;
-      u_om = om_r + Ky*y_e*v_r + Kth*sin(th_e);
+      u_v  = K1*x_e;
+      u_om = K2*phi+K1*sin(phi)*cos(phi);
 
       if(u_v < -MAX_V){
         u_v = -MAX_V;
@@ -148,9 +131,10 @@ int main(int argc, char **argv){
   ros::Time prev;
   ros::Time now;
 
-  double x_r = 2;
-  double y_r = 2;
-  double th_r = M_PI/4;
+  double x_e = 5;
+  double y_e = 0;
+  double phi = 0;
+
   double dt = 0;
 
   Controller c;
@@ -162,7 +146,7 @@ int main(int argc, char **argv){
     now = ros::Time::now();
     dt = (now-prev).toSec();
 
-    c.run(x_r, y_r, th_r, dt);
+    c.run(x_e, y_e, phi, dt);
 
     ros::spinOnce();
     rate.sleep();
