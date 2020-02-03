@@ -132,6 +132,7 @@ class Goal{
         x_d = status->data[1];
         y_d = status->data[2];
       }
+      cout << "hoge" <<endl;
     };
     tuple <bool, double, double> gets(){
       return {lost, x_d, y_d};
@@ -163,9 +164,6 @@ class Controller{
     Serial ser;
     /* ゴール */
     Goal goal;
-    /* ROS */
-    ros::NodeHandle n;
-    ros::Subscriber sub = n.subscribe("/status", 1000, &Goal::PointCallback, &goal);
     /* 速度入力 */
     double u_v  = 0.0;
     double u_om = 0.0;
@@ -198,7 +196,8 @@ class Controller{
     ros::Time start   = ros::Time::now();
     ros::Time current = start;
   public:
-    Controller(){
+    Controller(auto n){
+      ros::Subscriber sub = n.subscribe("/status", 1000, &Goal::PointCallback, &goal);
       if(debug_flg){
         fs.open("/home/pi/catkin_ws/src/feedback_inwheel/csv/"+ to_string(std::time(nullptr))+".csv");
         fs << "t,x,y,th,v_enc,om_enc,u_v,u_om,u_r,u_l,v_r,v_l,x_d,y_d,th_d,x_e,y_e,th_e,Kx,Ky,Kth,v_d,om_d" << endl;
@@ -301,12 +300,13 @@ class Controller{
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "feedback_inwheel");
+  ros::NodeHandle n;
 
   ros::Rate rate(20);
 
   ros::Time prev = ros::Time::now();;
   ros::Time now  = prev;
-  Controller c;
+  Controller c(n);
 
   double dt = 0;
 
