@@ -213,7 +213,7 @@ class Controller{
       }
     }
     void run(auto goal, double dt){
-      auto status = cart.update(u_v, u_om, dt);
+      auto status = cart.update(lost_flg, u_v, u_om, dt);
       x  = get<0>(status);
       y  = get<1>(status);
       th = get<2>(status);
@@ -313,7 +313,7 @@ int main(int argc, char **argv){
   Controller c;
   LRF        lrf;
 
-  ros::Subscriber sub = n.subscribe("/status", 1000, &LRF::PointCallback. &lrf);
+  ros::Subscriber sub = n.subscribe("/status", 1000, &LRF::PointCallback, &lrf);
 
   double dt   = 0.0;
   tuple<bool, double, double> goal;
@@ -327,7 +327,7 @@ int main(int argc, char **argv){
 
     goal = lrf.gets();
 
-    c.run(lost, x_d, y_d, dt);
+    c.run(goal, dt);
 
     ros::spinOnce();
     rate.sleep();
