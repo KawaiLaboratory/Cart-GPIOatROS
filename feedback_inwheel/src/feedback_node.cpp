@@ -20,7 +20,7 @@ class Cartbot{
   private:
     double x  = 0;
     double y  = 0;
-    double th = M_PI/2;
+    double th = 0;
     double v  = 0;
     double om = 0;
   public:
@@ -120,6 +120,24 @@ class Serial{
     };
 };
 
+class Goal{
+  private:
+    bool   lost = false;
+    double x_d  = 0.0;
+    double y_d  = 0.0;
+  public:
+    void PointCallback(const std_msgs::Float32MultiArray::ConstPtr& status){
+      lost = (status->data[0] != 0.0);
+      if(!lost){
+        x_d = status->data[1];
+        y_d = status->data[2];
+      }
+    };
+    tuple <bool, double, double> gets(){
+      return {lost, x_d, y_d}
+    };
+}
+
 class Controller{
   private:
     /* ゲイン*/
@@ -134,7 +152,7 @@ class Controller{
     const float  T = 0.61;   // トレッド
     /* saturation */
     const int   MAX_DUTY = 1000000;
-    const int   MIN_DUTY = 1000;
+    const int   MIN_DUTY = 10000;
     const float MAX_V    = 1;
     const float MAX_OM   = M_PI;
     /* debugmode */
@@ -143,6 +161,8 @@ class Controller{
     Cartbot cart;
     /* GPIO */
     Serial ser;
+    /* ゴール */
+    Goal goal;
     /* 速度入力 */
     double u_v  = 0.0;
     double u_om = 0.0;
@@ -161,6 +181,11 @@ class Controller{
     double x  = 0.0;
     double y  = 0.0;
     double th = 0.0;
+    /* 目標値 */
+    double x_d      = 0.0;
+    double y_d      = 0.0;
+    double th_d     = 0.0;
+    bool   lost_flg = false;
     /* 偏差 */
     double x_e  = 0.0;
     double y_e  = 0.0;
@@ -173,7 +198,7 @@ class Controller{
     Controller(){
       if(debug_flg){
         fs.open("/home/pi/catkin_ws/src/feedback_inwheel/csv/"+ to_string(std::time(nullptr))+".csv");
-        fs << "t,x,y,th,v_enc,om_enc,u_v,u_om,u_r,u_l,v_r,v_l,x_e,y_e,th_e,Kx,Ky,Kth,v_d,om_d" << endl;
+        fs << "t,x,y,th,v_enc,om_enc,u_v,u_om,u_r,u_l,v_r,v_l,x_d,y_d,th_d,x_e,y_e,th_e,Kx,Ky,Kth,v_d,om_d" << endl;
         output_statuses(true);
       }
     };
@@ -182,11 +207,16 @@ class Controller{
         fs.close();
       }
     }
-    void run(double x_d, double y_d, double th_d, double dt){
+    void run(double dt){
       auto status = cart.update(u_v, u_om, dt);
       x  = get<0>(status);
       y  = get<1>(status);
       th = get<2>(status);
+      auto desire = goal.gets();
+      lost = get<0>(desire);
+      x_d  = get<1>(desire);
+      y_d  = get<2>(desire);
+      th_d = atan2(y_d - y, x_d - x); 
 
       x_e  = (x_d-x)*cos(th) + (y_d-y)*sin(th);
       y_e  = (y_d-y)*cos(th) - (x_d-x)*sin(th);
@@ -213,16 +243,20 @@ class Controller{
         u_r = -MAX_DUTY;
       }else if(u_r > MAX_DUTY){
         u_r = MAX_DUTY;
+      }else if(abs(u_r) < MIN_DUTY){
+        u_r = 0;
       }
       if(u_l < -MAX_DUTY){
         u_l = -MAX_DUTY;
       }else if(u_l > MAX_DUTY){
         u_l = MAX_DUTY;
+      }else if(abs(u_l) < MIN_DUTY){
+        u_l = 0;
       }
 
       ser.input(u_r, u_l);
       if(debug_flg){
-        output_statuses();
+        output_statuses(false);
       }
     };
     void get_u(){
@@ -243,8 +277,7 @@ class Controller{
       l_read_flg = true;
 
       t_enc_prev = t_enc;
-      cout << v_r << "," << v_l << endl;
-    }
+    };
     void output_statuses(bool first = false){
       current = ros::Time::now();
       fs << (current-start).toSec() << ",";
@@ -253,6 +286,7 @@ class Controller{
       fs << u_v << "," << u_om << ",";
       fs << u_r << "," << u_l << ",";
       fs << v_r << "," << v_l << ",";
+      fs << x_d << "," << y_d << "," << th_d << ",";
       fs << x_e << "," << y_e << "," << th_e;
       if(first){
         fs << "," << Kx << "," << Ky << "," << Kth << ",";
@@ -270,21 +304,21 @@ int main(int argc, char **argv){
 
   ros::Time prev = ros::Time::now();;
   ros::Time now  = prev;
-
-  double x_d  = 0;
-  double y_d  = 3;
-  double th_d = M_PI/2;
-  double dt   = 0;
-
+  
   Controller c;
 
+  double dt = 0;
+
+  ros::Subscriber sub = n.subscribe("/status", 1000, &Goal::PointCallback, &c.goal);
+
+  ros::spinOnce();
   rate.sleep();
 
   while(ros::ok()){
     now = ros::Time::now();
     dt = (now-prev).toSec();
 
-    c.run(x_d, y_d, th_d, dt);
+    c.run(dt);
 
     ros::spinOnce();
     rate.sleep();
