@@ -24,10 +24,16 @@ class Cartbot{
     double v  = 0;
     double om = 0;
   public:
-    tuple<double, double, double, double, double> update(double u_v, double u_om, double dt){
-      x  = x + u_v * dt * cos(th+u_om*dt/2);
-      y  = y + u_v * dt * sin(th+u_om*dt/2);
-      th = th + u_om*dt;
+    tuple<double, double, double, double, double> update(bool lost_flg, double u_v, double u_om, double dt){
+      if(lost_flg){
+        x  = x + u_v * dt * cos(th+u_om*dt/2);
+        y  = y + u_v * dt * sin(th+u_om*dt/2);
+        th = th + u_om*dt;
+      }else{
+        x  = 0;
+        y  = 0;
+        th = 0;
+      }
       v  = u_v;
       om = u_om;
 
@@ -120,7 +126,7 @@ class Serial{
     };
 };
 
-class Goal{
+class LRF{
   private:
     bool   lost = false;
     double x_d  = 0.0;
@@ -162,8 +168,6 @@ class Controller{
     Cartbot cart;
     /* GPIO */
     Serial ser;
-    /* ゴール */
-    Goal goal;
     /* 速度入力 */
     double u_v  = 0.0;
     double u_om = 0.0;
@@ -196,8 +200,7 @@ class Controller{
     ros::Time start   = ros::Time::now();
     ros::Time current = start;
   public:
-    Controller(auto n){
-      ros::Subscriber sub = n.subscribe("/status", 1000, &Goal::PointCallback, &goal);
+    Controller(){
       if(debug_flg){
         fs.open("/home/pi/catkin_ws/src/feedback_inwheel/csv/"+ to_string(std::time(nullptr))+".csv");
         fs << "t,x,y,th,v_enc,om_enc,u_v,u_om,u_r,u_l,v_r,v_l,x_d,y_d,th_d,x_e,y_e,th_e,Kx,Ky,Kth,v_d,om_d" << endl;
@@ -209,15 +212,15 @@ class Controller{
         fs.close();
       }
     }
-    void run(double dt){
+    void run(auto goal, double dt){
       auto status = cart.update(u_v, u_om, dt);
       x  = get<0>(status);
       y  = get<1>(status);
       th = get<2>(status);
-      auto desire = goal.gets();
-      lost_flg = get<0>(desire);
-      x_d  = get<1>(desire);
-      y_d  = get<2>(desire);
+
+      lost_flg = get<0>(goal);
+      x_d  = get<1>(goal);
+      y_d  = get<2>(goal);
       th_d = atan2(y_d - y, x_d - x);
 
       x_e  = (x_d-x)*cos(th) + (y_d-y)*sin(th);
@@ -306,9 +309,14 @@ int main(int argc, char **argv){
 
   ros::Time prev = ros::Time::now();;
   ros::Time now  = prev;
-  Controller c(n);
 
-  double dt = 0;
+  Controller c;
+  LRF        lrf;
+
+  ros::Subscriber sub = n.subscribe("/status", 1000, &LRF::PointCallback. &lrf);
+
+  double dt   = 0.0;
+  tuple<bool, double, double> goal;
 
   ros::spinOnce();
   rate.sleep();
@@ -317,7 +325,9 @@ int main(int argc, char **argv){
     now = ros::Time::now();
     dt = (now-prev).toSec();
 
-    c.run(dt);
+    goal = lrf.gets();
+
+    c.run(lost, x_d, y_d, dt);
 
     ros::spinOnce();
     rate.sleep();
