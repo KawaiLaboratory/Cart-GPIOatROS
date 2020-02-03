@@ -52,8 +52,6 @@ class Serial{
       if(pi < 0){
         printf("GPIO ERROR");
       }
-      t_r = ros::Time::now();
-      t_l = ros::Time::now();
 
       for (int i = 0; i < 2; i++){
         set_mode(pi, pin_pwm[i], PI_OUTPUT);
