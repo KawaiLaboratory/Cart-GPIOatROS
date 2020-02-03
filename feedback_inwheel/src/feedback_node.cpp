@@ -13,8 +13,6 @@ int pi;
 extern int pi;
 long int r_count = 0;
 long int l_count = 0;
-ros::Time t_r;
-ros::Time t_l;
 bool r_read_flg = false;
 bool l_read_flg = false;
 
@@ -107,7 +105,6 @@ class Serial{
       return {r_dir, l_dir};
     };
     static void enc_r(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
-      t_r = ros::Time::now();
       if(r_read_flg){
         r_count = 1;
       }else{
@@ -116,7 +113,6 @@ class Serial{
       }
     };
     static void enc_l(int pi, unsigned int gpio, unsigned int level, uint32_t tick){
-      t_l = ros::Time::now();
       if(r_read_flg){
         l_count = 1;
       }else{
@@ -155,6 +151,8 @@ class Controller{
     /* エンコーダによる速度 */
     double v_enc  = 0.0;
     double om_enc = 0.0;
+    ros::Time t_enc_prev = ros::Time::now();
+    ros::Time t_enc      = t_enc_prev;
     /* PWM入力 */
     int u_r  = 0;
     int u_l  = 0;
@@ -230,9 +228,9 @@ class Controller{
       }
     };
     void get_u(){
-      ros::Time t = ros::Time::now();
-      int dr_count = r_count/(t-t_r).toSec();
-      int dl_count = l_count/(t-t_l).toSec();
+      t_enc = ros::Time::now();
+      int dr_count = r_count/(t_enc - t_enc_prev).toSec();
+      int dl_count = l_count/(t_enc - t_enc_prev).toSec();
       auto dir = ser.dir();
       int  r_dir = get<0>(dir);
       int  l_dir = get<1>(dir);
@@ -245,7 +243,8 @@ class Controller{
       u_om = om_enc;
       r_read_flg = true;
       l_read_flg = true;
-      cout << v_enc << "," << om_enc << endl;
+
+      t_enc_prev = t_enc;
     }
     void output_statuses(bool first = false){
       current = ros::Time::now();
