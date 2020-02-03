@@ -134,9 +134,9 @@ class Goal{
       }
     };
     tuple <bool, double, double> gets(){
-      return {lost, x_d, y_d}
+      return {lost, x_d, y_d};
     };
-}
+};
 
 class Controller{
   private:
@@ -163,6 +163,9 @@ class Controller{
     Serial ser;
     /* ゴール */
     Goal goal;
+    /* ROS */
+    ros::NodeHandle n;
+    ros::Subscriber sub = n.subscribe("/status", 1000, &Goal::PointCallback, &goal);
     /* 速度入力 */
     double u_v  = 0.0;
     double u_om = 0.0;
@@ -213,10 +216,10 @@ class Controller{
       y  = get<1>(status);
       th = get<2>(status);
       auto desire = goal.gets();
-      lost = get<0>(desire);
+      lost_flg = get<0>(desire);
       x_d  = get<1>(desire);
       y_d  = get<2>(desire);
-      th_d = atan2(y_d - y, x_d - x); 
+      th_d = atan2(y_d - y, x_d - x);
 
       x_e  = (x_d-x)*cos(th) + (y_d-y)*sin(th);
       y_e  = (y_d-y)*cos(th) - (x_d-x)*sin(th);
@@ -298,18 +301,14 @@ class Controller{
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "feedback_inwheel");
-  ros::NodeHandle n;
 
   ros::Rate rate(20);
 
   ros::Time prev = ros::Time::now();;
   ros::Time now  = prev;
-  
   Controller c;
 
   double dt = 0;
-
-  ros::Subscriber sub = n.subscribe("/status", 1000, &Goal::PointCallback, &c.goal);
 
   ros::spinOnce();
   rate.sleep();
