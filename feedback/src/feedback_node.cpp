@@ -4,18 +4,40 @@
 #include "std_msgs/Float32MultiArray.h"
 #include "std_msgs/Bool.h"
 #include "fstream"
-#include "tuple"
 
 using namespace std;
 
 int pi;
 extern int pi;
 
+class LRF{
+  private:
+    bool   lost = false;
+    double x_d  = 0.0;
+    double y_d  = 0.0;
+    double phi  = 0.0;
+  public:
+    void PointCallback(const std_msgs::Float32MultiArray::ConstPtr& status){
+      lost = (status->data[0] != 0.0);
+      if(!lost){
+        x_d = status->data[1];
+        y_d = status->data[2];
+      }else{
+        x_d = 0;
+        y_d = 0;
+      }
+      phi = atan2(y_d, x_d);
+    };
+    double x_d(){ return x_d };
+    double y_d(){ return y_d };
+    double phi(){ return phi };
+};
+
 class Cartbot{
   private:
     double x  = 0;
     double y  = 0;
-    double th = M_PI/2;
+    double th = 0;
     double v  = 0;
     double om = 0;
   public:
@@ -30,9 +52,9 @@ class Cartbot{
 
 class Serial{
   private:
-    const  int pin_pwm[2] = {18, 19};
-    const  int pin_dir[2] = {20, 21};
-    const  int HALF = 500000;
+    const int pin_pwm[2] = {18, 19};
+    const int pin_dir[2] = {20, 21};
+    const int HALF = 500000;
     int u_r_in = 0;
     int u_l_in = 0;
   public:
@@ -85,19 +107,24 @@ class Controller{
     /* saturation */
     const float MAX_V  = 1;
     const float MAX_OM = 1;
+    /* debugmode */
+    const bool debug_flg = true;
     /* カート */
     Cartbot cart;
     /* シリアル */
     Serial ser;
-    /* 速度入力 */
+    /* 制御則による速度入力 */
     double u_v  = 0.0;
     double u_om = 0.0;
     /* PWM入力 */
     int u_r  = 0;
     int u_l  = 0;
+    /* PWMによる速度 */
+    double v  = 0.0;
+    double om = 0.0;
   public:
-    int run(double x_e, double y_e, double phi, double dt){
-      cart.update(u_v, u_om, dt);
+    void run(double x_e, double y_e, double phi, double dt){
+      cart.update(v, om, dt);
 
       u_v  = K1*x_e;
       u_om = K2*phi+K1*sin(phi)*cos(phi);
@@ -116,9 +143,10 @@ class Controller{
       u_r = int((2*u_v+T*u_om)/(2*R*r));
       u_l = int((2*u_v-T*u_om)/(2*R*r));
 
-      ser.input(u_r, u_l);
+      v  = R*r/2*(u_r+u_l);
+      om = R*r/T*(u_r-u_l);
 
-      return 0;
+      ser.input(u_r, u_l);
     };
 };
 
@@ -131,13 +159,15 @@ int main(int argc, char **argv){
   ros::Time prev;
   ros::Time now;
 
-  double x_e = 5;
+  double dt = 0;
+  double x_e = 0;
   double y_e = 0;
   double phi = 0;
 
-  double dt = 0;
-
   Controller c;
+  LRF        lrf;
+
+  ros::Subscriber sub = n.subscribe("/status", 1000, &LRF::PointCallback, &lrf);
 
   prev = ros::Time::now();
   rate.sleep();
@@ -145,6 +175,10 @@ int main(int argc, char **argv){
   while(ros::ok()){
     now = ros::Time::now();
     dt = (now-prev).toSec();
+
+    x_e = lrf.x_d();
+    y_e = lrf.y_d();
+    phi = lrf.phi();
 
     c.run(x_e, y_e, phi, dt);
 
