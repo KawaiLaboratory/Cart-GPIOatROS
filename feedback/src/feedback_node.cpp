@@ -22,15 +22,18 @@ class LRF{
       if(!lost){
         x_d = status->data[1];
         y_d = status->data[2];
-      }else{
-        x_d = 0;
-        y_d = 0;
       }
       phi = atan2(y_d, x_d);
     };
-    double x_d(){ return x_d };
-    double y_d(){ return y_d };
-    double phi(){ return phi };
+    double get_x_d(){
+      return x_d;
+    };
+    double get_y_d(){
+      return y_d;
+    };
+    double get_phi(){
+      return phi;
+    };
 };
 
 class Cartbot{
@@ -176,9 +179,9 @@ int main(int argc, char **argv){
     now = ros::Time::now();
     dt = (now-prev).toSec();
 
-    x_e = lrf.x_d();
-    y_e = lrf.y_d();
-    phi = lrf.phi();
+    x_e = lrf.get_x_d();
+    y_e = lrf.get_y_d();
+    phi = lrf.get_phi();
 
     c.run(x_e, y_e, phi, dt);
 
