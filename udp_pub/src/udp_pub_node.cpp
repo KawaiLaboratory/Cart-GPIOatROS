@@ -11,8 +11,8 @@
 //for CSV
 #include "fstream"
 
-double l = 0.0;     //得られた最近点までの距離[m]
-double theta = 0.0; //得られた最近点の角度[rad]
+// double l = 0.0;     //得られた最近点までの距離[m]
+// double theta = 0.0; //得られた最近点の角度[rad]
 
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
@@ -29,7 +29,10 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   //     }
   //   }
   // }
-  std::ofstream fs(std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
+  double l = 0.0;     //得られた最近点までの距離[m]
+  double theta = 0.0; //得られた最近点の角度[rad]
+
+  std::ofstream fs("~/catkin_ws/src/udp_pub/csvs/"+std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
   fs << "l, theta" << std::endl;
 
   int count = scan->scan_time / scan->time_increment;
@@ -37,7 +40,11 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     l = scan->ranges[i];
     theta = scan->angle_min + scan->angle_increment * i;
 
-    fs << l << "," << theta << std::endl;
+    if(theta > scan->angle_max){
+      break;
+    }else{
+      fs << l << "," << theta << std::endl;
+    }
   }
   fs.close();
 }
@@ -47,7 +54,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "udp_pub");
   ros::NodeHandle n;
   ros::Subscriber sub;
-  ros::Rate loop_rate(0.5);
+  ros::Rate loop_rate(1);
 
   // int sock;
   // struct sockaddr_in addr;
