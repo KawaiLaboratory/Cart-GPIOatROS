@@ -79,30 +79,30 @@ class Serial{
     };
     void input(int u_r, int u_l){
       if(u_r < 0){
-        gpio_write(pi, pin_dir[0], PI_LOW);  // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[0], PI_HIGH);  // タイヤの回転方向指定
         u_r_in = abs(u_r);                  // 入力周波数指定
       }else{
-        gpio_write(pi, pin_dir[0], PI_HIGH); // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[0], PI_LOW); // タイヤの回転方向指定
         u_r_in = u_r;                       // 入力周波数指定
       }
       if(u_l < 0){
-        gpio_write(pi, pin_dir[1], PI_HIGH); // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_LOW); // タイヤの回転方向指定
         u_l_in = abs(u_l);                  // 入力周波数指定
       }else{
-        gpio_write(pi, pin_dir[1], PI_LOW);  // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_HIGH);  // タイヤの回転方向指定
         u_l_in = u_l;                       // 入力周波数指定
       }
 
-      hardware_PWM(pi, pin_pwm[0], u_l_in, HALF);
-      hardware_PWM(pi, pin_pwm[1], u_r_in, HALF);
+      hardware_PWM(pi, pin_pwm[0], u_r_in, HALF);
+      hardware_PWM(pi, pin_pwm[1], u_l_in, HALF);
     };
 };
 
 class Controller{
   private:
     /* ゲイン*/
-    const float K1  = 2;
-    const float K2  = 2;
+    const float K1  = 0.5;
+    const float K2  = 1;
     /* カート本体のパラメータ */
     const double R    = 0.0036*M_PI/180.0;
     const float  r    = 0.15/2;
