@@ -32,7 +32,7 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   double l = 0.0;     //得られた最近点までの距離[m]
   double theta = 0.0; //得られた最近点の角度[rad]
 
-  std::ofstream fs("~/catkin_ws/src/udp_pub/csvs/"+std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
+  std::ofstream fs(std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
   fs << "l, theta" << std::endl;
 
   int count = scan->scan_time / scan->time_increment;
