@@ -29,7 +29,7 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   //     }
   //   }
   // }
-  std::ofstream fs("~/catkin_ws/src/pigpio_test/person_torso_data/"+std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
+  std::ofstream fs(std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
   fs << "l, theta" << std::endl;
 
   int count = scan->scan_time / scan->time_increment;
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "udp_pub");
   ros::NodeHandle n;
   ros::Subscriber sub;
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(0.5);
 
   // int sock;
   // struct sockaddr_in addr;
@@ -62,8 +62,8 @@ int main(int argc, char **argv)
   // char theta_char[1023];
   // char buf[2048];
 
+  sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
   while(ros::ok()){
-    sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
 
     loop_rate.sleep();
     ros::spinOnce();
