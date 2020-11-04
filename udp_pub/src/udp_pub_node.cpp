@@ -13,6 +13,7 @@
 
 // double l = 0.0;     //得られた最近点までの距離[m]
 // double theta = 0.0; //得られた最近点の角度[rad]
+int cnt = 0;
 
 void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
@@ -47,6 +48,7 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
     }
   }
   fs.close();
+  cnt += 1;
 }
 
 int main(int argc, char **argv)
@@ -70,7 +72,7 @@ int main(int argc, char **argv)
   // char buf[2048];
 
   sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
-  while(ros::ok()){
+  while(cnt < 60){
 
     loop_rate.sleep();
     ros::spinOnce();
