@@ -32,8 +32,8 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
   // }
   double l = 0.0;     //得られた最近点までの距離[m]
   double theta = 0.0; //得られた最近点の角度[rad]
-
-  std::ofstream fs(std::to_string(std::time(nullptr))+".csv");  // CSVファイル生成
+  ros::Time now = ros::Time::now();
+  std::ofstream fs(std::to_string(now.toSec())+".csv");  // CSVファイル生成
   fs << "l, theta" << std::endl;
 
   int count = scan->scan_time / scan->time_increment;
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   ros::Subscriber sub;
   ros::Rate loop_rate(1);
-
+  ros::Rate sleep_rate(0.1);
   // int sock;
   // struct sockaddr_in addr;
 
@@ -72,6 +72,9 @@ int main(int argc, char **argv)
   // char buf[2048];
 
   sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallback);
+
+  sleep_rate.sleep();
+
   while(cnt < 60){
 
     loop_rate.sleep();
