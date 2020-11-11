@@ -19,10 +19,10 @@ class CBFController{
       u_om = msg->data[1];
     };
     double get_u_v(){
-      return x_d;
+      return u_v;
     };
     double get_u_om(){
-      return y_d;
+      return u_om;
     };
 };
 
