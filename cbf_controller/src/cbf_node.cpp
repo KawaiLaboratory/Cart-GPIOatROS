@@ -47,7 +47,7 @@ class Cartbot{
 class Serial{
   private:
     const int pin_pwm[2] = {18, 19};
-    const int pin_dir[2] = {20, 21};
+    const int pin_dir[2] = {21, 20};
     const int HALF = 500000;
     int u_r_in = 0;
     int u_l_in = 0;
@@ -70,17 +70,17 @@ class Serial{
     };
     void input(int u_r, int u_l){
       if(u_r < 0){
-        gpio_write(pi, pin_dir[0], PI_HIGH);  // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[0], PI_LOW);  // タイヤの回転方向指定
         u_r_in = abs(u_r);                  // 入力周波数指定
       }else{
-        gpio_write(pi, pin_dir[0], PI_LOW); // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[0], PI_HIGH); // タイヤの回転方向指定
         u_r_in = u_r;                       // 入力周波数指定
       }
       if(u_l < 0){
-        gpio_write(pi, pin_dir[1], PI_LOW); // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_HIGH); // タイヤの回転方向指定
         u_l_in = abs(u_l);                  // 入力周波数指定
       }else{
-        gpio_write(pi, pin_dir[1], PI_HIGH);  // タイヤの回転方向指定
+        gpio_write(pi, pin_dir[1], PI_LOW);  // タイヤの回転方向指定
         u_l_in = u_l;                       // 入力周波数指定
       }
 
