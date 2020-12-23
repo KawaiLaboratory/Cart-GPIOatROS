@@ -40,7 +40,7 @@ class Cartbot{
       th = th + u_om*dt;
       v  = u_v;
       om = u_om;
-      ROS_INFO("x:%.2f, y:%.2f, th:%.2f");
+      ROS_INFO("x:%.2f, y:%.2f, th:%.2f", x, y, th);
     };
 };
 
