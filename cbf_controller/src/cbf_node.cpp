@@ -19,10 +19,10 @@ class CBFController{
       u_om = msg->data[1];
     };
     double get_u_v(){
-      return x_d;
+      return u_v;
     };
     double get_u_om(){
-      return y_d;
+      return u_om;
     };
 };
 
@@ -35,11 +35,12 @@ class Cartbot{
     double om = 0;
   public:
     void update(double u_v, double u_om, double dt){
-      x  = x + u_v * dt * cos(th+u_om*dt/2);
-      y  = y + u_v * dt * sin(th+u_om*dt/2);
+      x  = x + u_v * dt * cos(th);
+      y  = y + u_v * dt * sin(th);
       th = th + u_om*dt;
       v  = u_v;
       om = u_om;
+      ROS_INFO("x:%.2f, y:%.2f, th:%.2f");
     };
 };
 
