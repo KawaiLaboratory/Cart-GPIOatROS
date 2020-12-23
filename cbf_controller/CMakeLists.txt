@@ -9,7 +9,6 @@ add_compile_options(-std=c++11 -pthread -lpigpiod_if2 -lrt)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -134,7 +133,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/cbf_node.cpp)
+add_executable(${PROJECT_NAME}_node src/cbf_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
