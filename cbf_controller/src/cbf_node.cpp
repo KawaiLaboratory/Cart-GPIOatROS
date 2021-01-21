@@ -142,7 +142,7 @@ int main(int argc, char **argv){
   Controller    c;
   CBFController cbf;
 
-  ros::Subscriber sub = n.subscribe("/u_cbf", 1000, &CBFController::Callback, &cbf);
+  ros::Subscriber sub = n.subscribe("/u_cbf", 2, &CBFController::Callback, &cbf);
 
   prev = ros::Time::now();
   rate.sleep();
